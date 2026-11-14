@@ -798,6 +798,7 @@ def _check() -> None:
 
 def prepare(stage: str = "full") -> None:
     ox.settings.cache_folder = str(CACHE / "osmnx_http")
+    ox.settings.http_user_agent = "KeralaFloodBench/0.1 (OSM vector preparation)"
     for folder in (LAYERS, META, CACHE):
         folder.mkdir(parents=True, exist_ok=True)
     aoi = _load_aoi()
