@@ -1,5 +1,5 @@
 # PROGRESS
-## Status: Phase 2 stopped at the approved Kittler–Illingworth threshold gate; OSM vectors restored
+## Status: Phase 2 resumed with approved post-hoc histogram-valley threshold; acceptance pending
 ## Checklist
 - [x] Phase 0
   - [x] 0.1 git init + .gitignore + upstream snapshot commit
@@ -24,7 +24,7 @@
   - [x] Taluk boundaries and verification
   - [x] Target grid
   - [x] Vector and raster layers
-  - [ ] Reference flood and threshold gate — stopped: T_ki is outside the approved range after the VV-only rebuild
+  - [ ] Reference flood using approved T=-14.0 dB (T_valley rounded half-up)
   - [ ] Manifest and cache outputs
   - [ ] Optional NASA cross-check
   - [ ] Lock layers and acceptance check
@@ -92,11 +92,12 @@ All runs used GISReActAgent on examples\urban-heat-madison, task "Compute the me
 - Python timing output used PYTHONIOENCODING=utf-8 after GISclaw progress output failed under cp1252.
 - Whole-system RAM was sampled because the Ollama model runner shares the Intel Arc system memory; Python-process memory alone is not representative.
 - Kirito approved rebuilding only the Sentinel-1 VV mosaic with -32768, zero and non-finite source samples excluded before linear averaging. The threshold decision is now Kittler–Illingworth with a valley-agreement gate; Otsu remains diagnostic and is recorded but no longer selects T. The approved rule is T=round(T_ki,1) only when T_ki is within [-22,-13] and within 1.5 dB of T_valley; otherwise stop.
+- Kirito superseded the KI-gated threshold selection after reviewing the histogram: choose T=-14.0 dB from T_valley=-13.95 dB using conventional half-up rounding. T_ki=-12.55 dB missed the prior range by 0.45 dB; the water/land trough is selected because the seasonality 1–9 flooded-vegetation tail biases Otsu and breaks KI's Gaussian-class assumption. Keep the [-22,-13] plausible range and all rubric ranges unchanged. Pack provenance is updated as instructed. This is a post-hoc threshold choice to describe in REPORT.md during Phase 6.
 - No Phase 0 acceptance item was skipped.
 
 ## Needs Kirito
 - Kirito explicitly resumed the work by directing Phase 1 after the Phase 0 STOP gate. The smoke task failures remain documented: Vulkan reached the 12-round limit; CPU stopped on repeated-code detection. The projected local matrix is below 20 hours, so no cut is required by the prompt.
-- The initial pre-rebuild Phase 2 Otsu stop is superseded by the approved VV-only rebuild and Kittler–Illingworth gate documented below. No threshold range or rule was changed.
+- The initial pre-rebuild Otsu stop and later KI-gate STOP are superseded by Kirito's post-hoc valley decision recorded under Decisions made. No plausible range or rubric range changed.
 - Pre-rebuild Phase 2 threshold diagnosis (historical; superseded by the approved rerun below):
   - District polygon areas in EPSG:32643: Ernakulam 2,919.995 km2 versus official land area about 3,068 km2 (-4.8%); Alappuzha 1,417.757 km2 versus about 1,415 km2 (+0.2%). Combined OSM area is 4,337.752 km2 versus 4,483 km2. The AOI mask is the union of these district polygons; it has zero in-AOI pixels outside their union. These areas give no evidence of substantial open sea in the polygons; minor coastal/backwater water may remain. Therefore a sea-removed Otsu result is not applicable. The requested plot is `data/kerala/meta/cache/vv_histogram.png`; the empty sea/outside-land candidate is labeled as such, and JRC curves use in-range VV pixels: seasonality >=10 n=272,981; 1-9 n=343,566; 0 n=4,189,467.
   - 500 m-radius spot medians (coordinates are lon,lat; only finite VV in [-30,5] dB): Vembanad Lake centre (76.390, 9.600), n=869, -19.50 dB; central Kochi/MG Road (76.285, 9.970), n=835, -3.53 dB; Kuttanad paddy near Nedumudi (76.370, 9.430), n=871, -18.72 dB. Lake median is within the expected -18 to -25 dB range.
@@ -107,7 +108,7 @@ All runs used GISReActAgent on examples\urban-heat-madison, task "Compute the me
   - Recomputed Otsu alternatives on the same 0.1 dB AOI histogram: current AOI -11.65 dB (4,806,014 pixels); excluding JRC seasonality >=10, -11.35 dB (4,533,033); Ernakulam, -11.15 dB (3,234,661); Alappuzha, -11.95 dB (1,571,353). For context, JRC >=10 is -14.95 dB (272,981 pixels), JRC 1-9 is -14.15 dB (343,566), and JRC 0 is -9.55 dB (4,189,467).
   - The OSM district polygons measure Ernakulam 2,919.995 km2 versus official land area about 3,068 km2 (-4.8%), and Alappuzha 1,417.757 km2 versus about 1,415 km2 (+0.2%). Their combined area is 4,337.752 km2 versus 4,483 km2 official combined land area. The AOI is the exact union of those polygons and has no in-AOI pixels outside that union; no substantial open sea is included, so a sea-removed Otsu sample is not applicable. The histogram's sea/outside-land candidate is empty (0 pixels); minor coastal/backwater water may remain.
   - Recomputed 500 m-radius spot medians: Vembanad Lake centre (76.390, 9.600), 869 pixels, -19.50 dB; central Kochi/MG Road (76.285, 9.970), 835 pixels, -3.53 dB; Kuttanad paddy near Nedumudi (76.370, 9.430), 871 pixels, -18.72 dB.
-  - Recommendation / STOP for Kirito: review whether the approved [-22,-13] dB range matches this RTC product and AOI sampling. Do not expand the range, substitute T_valley, write the calibrated pack value, polygonize flood, build the manifest, lock the layers, or run Phase 2 acceptance until Kirito decides how to handle the failed gate. The pack and rules are unchanged; flood area and acceptance outputs are therefore not available.
+  - At the time this diagnosis was recorded, the gate failure required STOP. Kirito later selected T=-14.0 dB from the histogram valley; see Decisions made.
 
 ## Phase 2 execution
 - Area of interest cached from `osmnx.geocode_to_gdf` for Ernakulam and Alappuzha on 2026-11-14. OSMnx's HTTP cache is under the ignored `data/kerala/meta/cache/` directory.
@@ -116,7 +117,8 @@ All runs used GISReActAgent on examples\urban-heat-madison, task "Compute the me
 - Target grid cached as EPSG:32643 at 30 m: 2,765 × 4,400 = 12,166,000 pixels (<25 million); exterior AOI pixels will be nodata in each agent-visible raster.
 - Raster outputs built from the two instructed descending Sentinel-1 slices, JRC seasonality, and Copernicus DEM. RTC sample percentiles were 0.0288/0.2867/0.8537, confirming linear gamma0; each raster has one band, EPSG:32643, 12,166,000 pixels and 4,819,784 valid inside-AOI pixels. Districts and hospitals (860 features) are also built. OSMnx uses a project-specific User-Agent, a 600-second request timeout and exponential backoff; the exact AOI/district geometries filter bbox results.
 - On 2026-11-14, per-district OSM queries restored `schools.geojson` (2,289 valid Point/Polygon features) and `roads_major.gpkg` (5,985 valid LineStrings). The raw writes contained 6 and 90 null geometries respectively; those unusable records were removed. The default endpoint returned 502 capacity errors and recovered on retry, so the alternate instance and Geofabrik fallback were not needed. Per-layer endpoint and UTC retrieval times are in `data/kerala/meta/cache/osm_retrieval.json`; `_write_manifest` now copies this metadata into `data_manifest.json` when the threshold gate allows the complete manifest to be written. The complete manifest remains uncreated while T is unresolved.
-- Initial Otsu flood stage stopped before polygonization. After the approved VV-only rebuild, the diagnostic stage regenerated both histogram images and stopped at the Kittler–Illingworth range gate (T_ki=-12.55 dB). No flood extent, flood mask, quicklook, manifest, NASA cross-check or read-only layer attributes were created; Phase 2 `--check` was not run because the user-directed threshold rule requires STOP on this result.
+- Hospital GeoJSON diagnosis before rebuild: the 860-row file's saved `geom_kind` values (captured from the source geometries before serialization) were 510 Point and 350 Polygon; OSM cache IDs classify these as 510 nodes and 350 ways, with 0 relations. After reading the file, 440 geometries were Points and 420 were null; the nulls break down to 230 node/Point and 190 way/Polygon rows, and 160 way/Polygon rows instead had Point geometry. Fetch/clip retained the source rows and hospitals do not pass through `to_crs`; the loss/misalignment occurs while constructing a new GeoDataFrame: property lists use a fresh RangeIndex while `geometry=raw.geometry` retained the sparse post-filter index. Resetting the frame before assembly is the fix. The same audit found 6 `geom_kind` mismatches in schools (no nulls) and 0 nulls in the 5,985 LineString roads; all three OSM layers are being rebuilt and checked after serialization.
+- Historical initial Otsu and KI-gate runs stopped before polygonization. Kirito has now authorized the post-hoc valley selection; the hospital/vector geometry audit and rebuild must pass before flood outputs are generated.
 
 ## Phase 3 execution
 - Kirito directed continuation to Phase 3 while the Phase 2 threshold review remains pending. The Phase 3 pack keeps `water_threshold_vv_db` unresolved in YAML and resolves it only from an accepted manifest at load time; it rejects values outside the prescribed range. No threshold value was invented or substituted.

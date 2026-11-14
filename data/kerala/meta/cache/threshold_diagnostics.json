@@ -9,13 +9,19 @@
   "T_otsu": -11.649999999999999,
   "T_ki": -12.549999999999999,
   "T_valley": -13.95,
-  "T": null,
+  "T": -14.0,
+  "threshold_choice": {
+    "method": "histogram_valley",
+    "post_hoc": true,
+    "reason": "User-approved post-hoc choice: T_ki failed the range rule by 0.45 dB; the histogram shows Otsu and KI on the land-mode shoulder, with the JRC seasonality 1-9 flooded-vegetation tail breaking KI's Gaussian assumption. T is the 1 dB-smoothed trough between the water and land modes.",
+    "sensitivity_db": 1.0
+  },
   "ki_criterion": 3.4741316249990346,
   "water_mode_db": -18.849999999999998,
   "land_mode_db": -5.149999999999999,
   "gate_passed": false,
   "otsu_water_pixel_fraction": 0.15257113275158998,
-  "water_pixel_fraction": null,
+  "water_pixel_fraction": 0.13563610093520326,
   "otsu_alternatives": {
     "AOI": {
       "pixels": 4806014,

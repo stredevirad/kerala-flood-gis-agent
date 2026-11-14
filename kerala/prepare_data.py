@@ -11,8 +11,11 @@ import os
 import sys
 import time
 from datetime import datetime, timezone
+from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
 
 import geopandas as gpd
 import matplotlib
@@ -39,6 +42,10 @@ LAYERS = DATA_ROOT / "layers"
 META = DATA_ROOT / "meta"
 CACHE = META / "cache"
 STAC_URL = "https://planetarycomputer.microsoft.com/api/stac/v1"
+NASA_EXPORT_URL = (
+    "https://maps.disasters.nasa.gov/ags03/rest/services/Kerala_India_Flood/"
+    "Sentinel1_20180821_water_extent/MapServer/export"
+)
 TARGET_CRS = "EPSG:32643"
 SOURCE_NODATA_S1 = -32768
 NODATA_JRC = 255
@@ -142,6 +149,44 @@ def _keep_expected_geometries(frame: gpd.GeoDataFrame, kind: str) -> gpd.GeoData
         for geom in frame.geometry
     ]
     return frame.loc[keep].copy()
+
+
+def _geometry_counts(frame: gpd.GeoDataFrame) -> dict[str, int]:
+    counts = frame.geometry.geom_type.value_counts(dropna=False).to_dict()
+    return {str(name) if name is not None else "Null": int(count) for name, count in counts.items()}
+
+
+def _element_geometry_counts(frame: gpd.GeoDataFrame) -> dict[str, dict[str, int]]:
+    elements = frame["element"].fillna("unknown").astype(str) if "element" in frame else pd.Series(
+        ["unknown"] * len(frame), index=frame.index
+    )
+    geometries = frame.geometry.geom_type.fillna("Null").astype(str)
+    pairs = pd.DataFrame({"element": elements.to_numpy(), "geometry": geometries.to_numpy()})
+    counts = pairs.value_counts().to_dict()
+    result: dict[str, dict[str, int]] = {}
+    for (element, geometry), count in counts.items():
+        result.setdefault(element, {})[geometry] = int(count)
+    return result
+
+
+def _validate_vector_layer(frame: gpd.GeoDataFrame, filename: str) -> dict[str, int]:
+    if frame.geometry.isna().any():
+        raise ValueError(f"{filename} has {int(frame.geometry.isna().sum())} null geometries")
+    if frame.geometry.is_empty.any():
+        raise ValueError(f"{filename} has {int(frame.geometry.is_empty.sum())} empty geometries")
+    types = set(frame.geometry.geom_type.dropna().unique())
+    if filename in {"hospitals.geojson", "schools.geojson"}:
+        unexpected = types - {"Point", "Polygon", "MultiPolygon"}
+        if unexpected:
+            raise ValueError(f"{filename} has unexpected geometry types: {sorted(unexpected)}")
+        if "geom_kind" not in frame:
+            raise ValueError(f"{filename} is missing geom_kind")
+        mismatched = frame.geom_kind.astype(str) != frame.geometry.geom_type.astype(str)
+        if mismatched.any():
+            raise ValueError(f"{filename} has {int(mismatched.sum())} geom_kind/geometry mismatches")
+    elif filename == "roads_major.gpkg" and types - {"LineString"}:
+        raise ValueError(f"{filename} has non-LineString geometries: {sorted(types)}")
+    return _geometry_counts(frame)
 
 
 def _load_aoi() -> gpd.GeoDataFrame:
@@ -599,7 +644,7 @@ def _prepare_continuous_layer(items, key, path, transform, width, height, inside
     return output
 
 
-def _prepare_vector_layers(aoi, aoi_projected):
+def _prepare_vector_layers(aoi, aoi_projected, *, force: bool = False):
     LAYERS.mkdir(parents=True, exist_ok=True)
     district_path = LAYERS / "districts.gpkg"
     if not district_path.exists():
@@ -622,17 +667,14 @@ def _prepare_vector_layers(aoi, aoi_projected):
     ]
     for filename, tags, kind in feature_specs:
         output_path = LAYERS / filename
-        if output_path.exists():
-            if filename in {"schools.geojson", "roads_major.gpkg"}:
-                existing = gpd.read_file(output_path)
-                clean = _keep_expected_geometries(existing, kind)
-                if len(clean) != len(existing):
-                    _atomic_vector_write(
-                        clean,
-                        output_path,
-                        "GeoJSON" if output_path.suffix.lower() == ".geojson" else "GPKG",
-                    )
-            continue
+        if output_path.exists() and not force:
+            existing = gpd.read_file(output_path)
+            try:
+                _validate_vector_layer(existing, filename)
+            except ValueError as exc:
+                print(f"Rebuilding invalid {filename}: {exc}", flush=True)
+            else:
+                continue
         print(f"Phase 2.4: retrieving {filename} from OpenStreetMap", flush=True)
         per_district = filename in {"schools.geojson", "roads_major.gpkg"}
         query_areas = (
@@ -642,10 +684,21 @@ def _prepare_vector_layers(aoi, aoi_projected):
         )
         frames = []
         endpoints = []
+        fetched_rows = 0
+        missing_by_element: dict[str, int] = {}
         for district_name, query_area in query_areas:
             if per_district:
                 print(f"Querying {filename} for {district_name}", flush=True)
             frame, endpoint = _feature_frame(query_area, tags, return_source=True)
+            fetched_rows += len(frame)
+            source_missing = frame.geometry.isna() | frame.geometry.is_empty
+            if source_missing.any():
+                if "element" in frame:
+                    counts = frame.loc[source_missing, "element"].fillna("unknown").astype(str).value_counts()
+                else:
+                    counts = pd.Series({"unknown": int(source_missing.sum())})
+                for element, count in counts.items():
+                    missing_by_element[element] = missing_by_element.get(element, 0) + int(count)
             frame = frame[frame.geometry.notna() & ~frame.geometry.is_empty].copy()
             frame = frame[frame.geometry.intersects(query_area)]
             frames.append(frame)
@@ -662,13 +715,20 @@ def _prepare_vector_layers(aoi, aoi_projected):
         raw = raw[raw.geometry.intersects(union_ll)]
         if kind == "facility":
             raw = raw[raw.geometry.geom_type.isin(["Point", "Polygon", "MultiPolygon"])].copy()
+            raw = raw.reset_index(drop=True)
+            before_save_counts = _element_geometry_counts(raw)
+            print(
+                f"{filename}: fetched={fetched_rows:,}; dropped missing/empty by element={missing_by_element}; "
+                f"pre-save element/geometry counts={before_save_counts}",
+                flush=True,
+            )
             result = gpd.GeoDataFrame(
                 {
                     "osm_id": [_osm_id(row) for _, row in raw.iterrows()],
                     "name": [_text(row.get("name:en")) or _text(row.get("name")) for _, row in raw.iterrows()],
                     "geom_kind": [geom.geom_type for geom in raw.geometry],
                 },
-                geometry=raw.geometry,
+                geometry=list(raw.geometry),
                 crs="EPSG:4326",
             )
             result = result[["osm_id", "name", "geom_kind", "geometry"]]
@@ -676,23 +736,27 @@ def _prepare_vector_layers(aoi, aoi_projected):
             _atomic_vector_write(result, output_path, driver)
         else:
             raw = raw[raw.geometry.geom_type.eq("LineString")].copy()
+            raw = raw.reset_index(drop=True)
+            before_save_counts = _element_geometry_counts(raw)
+            print(
+                f"{filename}: fetched={fetched_rows:,}; dropped missing/empty by element={missing_by_element}; "
+                f"pre-save element/geometry counts={before_save_counts}",
+                flush=True,
+            )
             result = gpd.GeoDataFrame(
                 {
                     "highway": [_text(row.get("highway")) for _, row in raw.iterrows()],
                     "name": [_text(row.get("name:en")) or _text(row.get("name")) for _, row in raw.iterrows()],
                 },
-                geometry=raw.geometry,
+                geometry=list(raw.geometry),
                 crs="EPSG:4326",
             ).to_crs(TARGET_CRS)
             result = result[["highway", "name", "geometry"]]
             driver = "GPKG"
             _atomic_vector_write(result, output_path, driver)
         written = gpd.read_file(output_path)
-        clean_written = _keep_expected_geometries(written, kind)
-        if len(clean_written) != len(written):
-            _atomic_vector_write(clean_written, output_path, driver)
-        result = clean_written
-        print(f"Wrote {filename}: {len(result):,} features", flush=True)
+        written_geometry_counts = _validate_vector_layer(written, filename)
+        print(f"Wrote {filename}: {len(written):,} features; geometry counts={written_geometry_counts}", flush=True)
         retrieved_at = _now()
         retrieval["retrieved_at"] = retrieved_at
         retrieval["layers"][filename] = {
@@ -700,6 +764,11 @@ def _prepare_vector_layers(aoi, aoi_projected):
             "source": "OpenStreetMap Overpass API",
             "endpoints": list(dict.fromkeys(endpoints)),
             "district_queries": [name for name, _ in query_areas if name != "AOI"],
+            "fetched_rows": int(fetched_rows),
+            "null_or_empty_geometry_dropped_by_element": {str(k): int(v) for k, v in missing_by_element.items()},
+            "geometry_counts_before_save_by_element": before_save_counts,
+            "geometry_counts_after_save": written_geometry_counts,
+            "features_after_save": int(len(written)),
         }
         _json_write(retrieval_path, retrieval)
 
@@ -711,6 +780,11 @@ def _otsu_threshold(values: np.ndarray) -> float:
         range=(VV_HIST_MIN_DB, VV_HIST_MAX_DB),
     )
     return _otsu_from_hist(hist, (edges[:-1] + edges[1:]) / 2.0)
+
+
+def _round_db_tenth(value: float) -> float:
+    """Round to 0.1 dB using conventional half-up rounding, including negatives."""
+    return float(Decimal(str(value)).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP))
 
 
 def _otsu_from_hist(hist: np.ndarray, centers: np.ndarray) -> float:
@@ -798,7 +872,7 @@ def _threshold_diagnostics(
     valley_index = water_mode_index + int(np.argmin(smoothed[water_mode_index : land_mode_index + 1]))
     t_valley = float(centers[valley_index])
     gate_passed = -22.0 <= t_ki <= -13.0 and abs(t_ki - t_valley) <= 1.5
-    threshold = round(t_ki, 1) if gate_passed else None
+    threshold = _round_db_tenth(t_valley)
 
     land_mask = geometry_mask(
         [mapping(unary_union(projected.geometry.tolist()))],
@@ -869,6 +943,7 @@ def _threshold_diagnostics(
     ax.axvline(t_otsu, color="#d62728", linestyle=":", linewidth=2, label=f"T_otsu={t_otsu:.2f} dB")
     ax.axvline(t_ki, color="#1f77b4", linestyle="--", linewidth=2, label=f"T_ki={t_ki:.2f} dB")
     ax.axvline(t_valley, color="#2ca02c", linestyle="-.", linewidth=2, label=f"T_valley={t_valley:.2f} dB")
+    ax.axvline(threshold, color="#9467bd", linestyle="-", linewidth=1.8, label=f"Chosen T={threshold:.1f} dB")
     ax.set(title="AOI VV histogram with threshold candidates", xlabel="VV backscatter (dB)", ylabel="Pixel count")
     ax.set_xlim(VV_HIST_MIN_DB, VV_HIST_MAX_DB)
     ax.grid(alpha=0.22)
@@ -902,6 +977,17 @@ def _threshold_diagnostics(
         "T_ki": t_ki,
         "T_valley": t_valley,
         "T": threshold,
+        "threshold_choice": {
+            "method": "histogram_valley",
+            "post_hoc": True,
+            "reason": (
+                "User-approved post-hoc choice: T_ki failed the range rule by 0.45 dB; "
+                "the histogram shows Otsu and KI on the land-mode shoulder, with the "
+                "JRC seasonality 1-9 flooded-vegetation tail breaking KI's Gaussian assumption. "
+                "T is the 1 dB-smoothed trough between the water and land modes."
+            ),
+            "sensitivity_db": 1.0,
+        },
         "ki_criterion": ki_criterion,
         "water_mode_db": float(centers[water_mode_index]),
         "land_mode_db": float(centers[land_mode_index]),
@@ -916,8 +1002,8 @@ def _threshold_diagnostics(
     }
     _json_write(CACHE / "threshold_diagnostics.json", result)
     print(f"Threshold histogram: {values.size:,} pixels; {VV_HIST_BIN_COUNT} bins at {VV_HIST_BIN_WIDTH_DB:.1f} dB", flush=True)
-    print(f"T_otsu={t_otsu:.4f} dB; T_ki={t_ki:.4f} dB; T_valley={t_valley:.4f} dB; T={threshold}", flush=True)
-    print(f"KI/valley gate={'PASS' if gate_passed else 'STOP'}; Otsu water fraction={otsu_water_fraction:.6%}; water fraction at T={water_fraction}", flush=True)
+    print(f"T_otsu={t_otsu:.4f} dB; T_ki={t_ki:.4f} dB; T_valley={t_valley:.4f} dB; chosen T={threshold:.1f} dB", flush=True)
+    print(f"Prior KI rule={'PASS' if gate_passed else 'FAIL'}; post-hoc valley choice; Otsu water fraction={otsu_water_fraction:.6%}; water fraction at T={water_fraction:.6%}", flush=True)
     for name, sample in alt_otsu.items():
         if sample is not None:
             print(f"Otsu {name}: T={sample['T_otsu']:.4f} dB; pixels={sample['pixels']:,}", flush=True)
@@ -932,12 +1018,6 @@ def _reference_flood(vv, season, dem_full, inside, projected, transform, width, 
     if path.exists() and manifest_path.exists():
         return gpd.read_file(path), None, None
     thresholds = _threshold_diagnostics(vv, season, inside, projected, transform, width, height)
-    if not thresholds["gate_passed"]:
-        raise RuntimeError(
-            "NEEDS KIRITO: KI/valley threshold gate failed: "
-            f"T_otsu={thresholds['T_otsu']:.4f}, T_ki={thresholds['T_ki']:.4f}, "
-            f"T_valley={thresholds['T_valley']:.4f}; no flood outputs were written"
-        )
     valid_vv = inside & np.isfinite(vv)
     threshold_raw = float(thresholds["T_otsu"])
     threshold = float(thresholds["T"])
@@ -968,7 +1048,7 @@ def _reference_flood(vv, season, dem_full, inside, projected, transform, width, 
     if dissolved is None or dissolved.is_empty:
         raise RuntimeError("NEEDS KIRITO: KI reference flood is empty")
     flood_gdf = gpd.GeoDataFrame(
-        {"source": [f"S1A 2018-08-21 VV Kittler-Illingworth T={threshold:.1f}"]},
+        {"source": [f"S1A 2018-08-21 VV histogram valley T={threshold:.1f}"]},
         geometry=[dissolved],
         crs=TARGET_CRS,
     )
@@ -976,8 +1056,10 @@ def _reference_flood(vv, season, dem_full, inside, projected, transform, width, 
 
     per_district: dict[str, Any] = {}
     counts = {"water": 0, "permanent_water": 0, "steep_ground": 0, "flood": 0}
+    district_masks = []
     for _, row in projected.iterrows():
         mask = geometry_mask([mapping(row.geometry)], out_shape=(height, width), transform=transform, invert=True)
+        district_masks.append((str(row["name"]), mask))
         part = {
             "water": int(np.count_nonzero(water & mask)),
             "permanent_water": int(np.count_nonzero(permanent & mask)),
@@ -990,6 +1072,60 @@ def _reference_flood(vv, season, dem_full, inside, projected, transform, width, 
         }
         for key, value in part.items():
             counts[key] += value
+
+    taluks = gpd.read_file(LAYERS / "taluks.gpkg").to_crs(TARGET_CRS)
+    taluk_masks = []
+    pixels_by_taluk: dict[str, Any] = {}
+    for _, row in taluks.iterrows():
+        mask = geometry_mask([mapping(row.geometry)], out_shape=(height, width), transform=transform, invert=True)
+        inside_taluk = mask & inside
+        denominator = int(np.count_nonzero(inside_taluk))
+        flooded = int(np.count_nonzero(flood & mask))
+        name = str(row["name"])
+        taluk_masks.append((name, str(row["district"]), inside_taluk))
+        pixels_by_taluk[name] = {
+            "district": str(row["district"]),
+            "aoi_pixels": denominator,
+            "flood_pixels": flooded,
+            "flood_km2": flooded * PIXEL_SIZE * PIXEL_SIZE / 1_000_000,
+            "flooded_percent": 100.0 * flooded / denominator if denominator else 0.0,
+        }
+
+    histogram_valid = (
+        inside & np.isfinite(vv) & (vv >= VV_HIST_MIN_DB) & (vv <= VV_HIST_MAX_DB)
+    )
+    histogram_pixel_count = int(np.count_nonzero(histogram_valid))
+    sensitivity: dict[str, Any] = {}
+    for sensitivity_threshold in (threshold - 1.0, threshold, threshold + 1.0):
+        sensitivity_water = valid_vv & (vv <= sensitivity_threshold)
+        sensitivity_flood = sensitivity_water & ~permanent & ~steep & inside
+        district_sensitivity = {}
+        for name, mask in district_masks:
+            flooded = int(np.count_nonzero(sensitivity_flood & mask))
+            district_sensitivity[name] = {
+                "flood_pixels": flooded,
+                "flood_km2": flooded * PIXEL_SIZE * PIXEL_SIZE / 1_000_000,
+            }
+        taluk_sensitivity = {}
+        for name, district, mask in taluk_masks:
+            flooded = int(np.count_nonzero(sensitivity_flood & mask))
+            denominator = int(np.count_nonzero(mask))
+            taluk_sensitivity[name] = {
+                "district": district,
+                "flood_pixels": flooded,
+                "flood_km2": flooded * PIXEL_SIZE * PIXEL_SIZE / 1_000_000,
+                "flooded_percent": 100.0 * flooded / denominator if denominator else 0.0,
+            }
+        water_fraction = (
+            float(np.count_nonzero(sensitivity_water & histogram_valid) / histogram_pixel_count)
+            if histogram_pixel_count else 0.0
+        )
+        sensitivity[f"{sensitivity_threshold:.1f}"] = {
+            "T_db": sensitivity_threshold,
+            "water_pixel_fraction": water_fraction,
+            "districts": district_sensitivity,
+            "taluks": taluk_sensitivity,
+        }
     quicklook = CACHE / "quicklook.png"
     stride = max(1, math.ceil(max(width, height) / 1800))
     fig, ax = plt.subplots(figsize=(12, 10), constrained_layout=True)
@@ -1008,7 +1144,7 @@ def _reference_flood(vv, season, dem_full, inside, projected, transform, width, 
     overlay[perm_view] = (0.0, 0.05, 0.35, 0.85)
     ax.imshow(overlay, interpolation="nearest", extent=extent)
     projected.boundary.plot(ax=ax, color="yellow", linewidth=0.8)
-    ax.set_title(f"VV dB with KI flood (blue), permanent water (navy), T={threshold:.1f} dB")
+    ax.set_title(f"VV dB with histogram-valley flood (blue), permanent water (navy), T={threshold:.1f} dB")
     ax.set_axis_off()
     quicklook.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(quicklook, dpi=160)
@@ -1019,15 +1155,68 @@ def _reference_flood(vv, season, dem_full, inside, projected, transform, width, 
         "T_ki": thresholds["T_ki"],
         "T_valley": thresholds["T_valley"],
         "T": threshold,
+        "threshold_choice": thresholds["threshold_choice"],
         "threshold_diagnostics": thresholds,
         "water_pixel_fraction": thresholds["water_pixel_fraction"],
         "otsu_water_pixel_fraction": thresholds["otsu_water_pixel_fraction"],
         "pixels_by_district": per_district,
+        "pixels_by_taluk": pixels_by_taluk,
+        "sensitivity_at_plus_minus_1_db": sensitivity,
         "counts_total": counts,
         "total_km2": {key: value * PIXEL_SIZE * PIXEL_SIZE / 1_000_000 for key, value in counts.items()},
     }
     _json_write(CACHE / "flood_stats.json", result)
     return flood_gdf, flood, result
+
+
+def _nasa_crosscheck(transform, width: int, height: int) -> dict[str, Any]:
+    output_path = CACHE / "nasa_compare.png"
+    status_path = CACHE / "nasa_crosscheck.json"
+    if output_path.is_file() and status_path.is_file():
+        existing = json.loads(status_path.read_text(encoding="utf-8"))
+        if existing.get("status") == "downloaded":
+            return existing
+    xmin = float(transform.c)
+    ymax = float(transform.f)
+    xmax = xmin + width * PIXEL_SIZE
+    ymin = ymax - height * PIXEL_SIZE
+    out_width = 1200
+    out_height = max(1, int(round(out_width * height / width)))
+    params = {
+        "bbox": f"{xmin},{ymin},{xmax},{ymax}",
+        "bboxSR": 32643,
+        "size": f"{out_width},{out_height}",
+        "imageSR": 32643,
+        "format": "png32",
+        "transparent": "false",
+        "f": "image",
+    }
+    result: dict[str, Any] = {
+        "source": NASA_EXPORT_URL,
+        "retrieved_at": _now(),
+        "bbox": [xmin, ymin, xmax, ymax],
+        "bbox_crs": TARGET_CRS,
+        "size": [out_width, out_height],
+    }
+    try:
+        request = Request(
+            NASA_EXPORT_URL + "?" + urlencode(params),
+            headers={"User-Agent": "KeralaFloodBench/0.1 (NASA map cross-check)"},
+        )
+        with urlopen(request, timeout=90) as response:
+            payload = response.read(25 * 1024 * 1024 + 1)
+        if len(payload) > 25 * 1024 * 1024:
+            raise RuntimeError("NASA export exceeded the 25 MiB response limit")
+        if not payload.startswith(b"\x89PNG\r\n\x1a\n"):
+            raise RuntimeError(f"NASA export did not return PNG bytes: {payload[:160]!r}")
+        temp = output_path.with_name(output_path.stem + ".partial" + output_path.suffix)
+        temp.write_bytes(payload)
+        os.replace(temp, output_path)
+        result.update({"status": "downloaded", "path": str(output_path.relative_to(ROOT)), "bytes": len(payload)})
+    except Exception as exc:
+        result.update({"status": "skipped", "reason": f"{type(exc).__name__}: {exc}"})
+    _json_write(status_path, result)
+    return result
 
 
 def _write_manifest(aoi, taluks, stac_items, rtc_info, flood_stats):
@@ -1053,9 +1242,16 @@ def _write_manifest(aoi, taluks, stac_items, rtc_info, flood_stats):
         path = LAYERS / name
         if path.suffix.lower() == ".tif":
             with rasterio.open(path) as src:
-                feature_counts[name] = {"pixels": int(src.width * src.height)}
+                feature_counts[name] = {
+                    "pixels": int(src.width * src.height),
+                    "bands": int(src.count),
+                }
         else:
-            feature_counts[name] = {"features": int(len(gpd.read_file(path)))}
+            frame = gpd.read_file(path)
+            feature_counts[name] = {
+                "features": int(len(frame)),
+                "geometry_types": _validate_vector_layer(frame, name),
+            }
     with rasterio.open(LAYERS / "s1_vv_20180821_db.tif") as grid_source:
         grid_width, grid_height = grid_source.width, grid_source.height
     osm_retrieval = json.loads((CACHE / "osm_retrieval.json").read_text(encoding="utf-8"))
@@ -1074,10 +1270,13 @@ def _write_manifest(aoi, taluks, stac_items, rtc_info, flood_stats):
         "T_ki": flood_stats["T_ki"],
         "T_valley": flood_stats["T_valley"],
         "T": flood_stats["T"],
+        "threshold_choice": flood_stats["threshold_choice"],
         "water_pixel_fraction": flood_stats["water_pixel_fraction"],
         "otsu_water_pixel_fraction": flood_stats["otsu_water_pixel_fraction"],
         "threshold_diagnostics": flood_stats["threshold_diagnostics"],
         "pixels_and_km2_by_district": flood_stats["pixels_by_district"],
+        "pixels_and_km2_by_taluk": flood_stats["pixels_by_taluk"],
+        "sensitivity_at_plus_minus_1_db": flood_stats["sensitivity_at_plus_minus_1_db"],
         "pixels_and_km2_total": flood_stats["total_km2"],
         "feature_counts": feature_counts,
         "osm_retrieval_time": osm_retrieval["retrieved_at"],
@@ -1096,7 +1295,9 @@ def _write_manifest(aoi, taluks, stac_items, rtc_info, flood_stats):
             {"name": row["name"], "name_local": row["name_local"], "district": row["district"]}
             for _, row in taluks.iterrows()
         ],
-        "optional_nasa_crosscheck": "skipped",
+        "optional_nasa_crosscheck": flood_stats.get("optional_nasa_crosscheck", {
+            "status": "skipped", "reason": "NASA export was not attempted"
+        }),
     }
     _json_write(META / "data_manifest.json", manifest)
     return manifest
@@ -1121,19 +1322,30 @@ def _check() -> None:
                     raise RuntimeError(f"{name}: expected one raster band, got {src.count}")
                 if src.width * src.height >= MAX_PIXELS:
                     raise RuntimeError(f"{name}: {src.width * src.height:,} pixels exceeds limit")
+                actual_counts = {"pixels": int(src.width * src.height), "bands": int(src.count)}
         else:
             frame = gpd.read_file(path)
             actual = frame.crs.to_string() if frame.crs else None
             if actual != crs:
                 raise RuntimeError(f"{name}: CRS {actual}, expected {crs}")
+            try:
+                geometry_types = _validate_vector_layer(frame, name)
+            except ValueError as exc:
+                raise RuntimeError(str(exc)) from exc
+            actual_counts = {"features": int(len(frame)), "geometry_types": geometry_types}
+        if actual_counts != manifest.get("feature_counts", {}).get(name):
+            raise RuntimeError(
+                f"{name}: feature counts differ from manifest: "
+                f"actual={actual_counts}, recorded={manifest.get('feature_counts', {}).get(name)}"
+            )
     threshold = float(manifest["T"])
     if not -22 <= threshold <= -13:
         raise RuntimeError(f"T={threshold} is outside [-22,-13]")
-    t_ki = float(manifest["T_ki"])
     t_valley = float(manifest["T_valley"])
-    if not -22 <= t_ki <= -13 or abs(t_ki - t_valley) > 1.5 or round(t_ki, 1) != threshold:
+    choice = manifest.get("threshold_choice", {})
+    if choice.get("method") != "histogram_valley" or choice.get("post_hoc") is not True or _round_db_tenth(t_valley) != threshold:
         raise RuntimeError(
-            f"Threshold decision is inconsistent: T_ki={t_ki}, T_valley={t_valley}, T={threshold}"
+            f"Post-hoc valley threshold decision is inconsistent: T_valley={t_valley}, T={threshold}"
         )
     for fraction_name in ("water_pixel_fraction", "otsu_water_pixel_fraction"):
         fraction = float(manifest[fraction_name])
@@ -1152,7 +1364,7 @@ def _check() -> None:
         raise RuntimeError("Layer SHA-256 hashes do not match data_manifest.json")
     print("Phase 2 data check passed")
     print(
-        f"T_otsu={manifest['T_otsu']:.4f} dB; T_ki={t_ki:.4f} dB; "
+        f"T_otsu={manifest['T_otsu']:.4f} dB; T_ki={manifest['T_ki']:.4f} dB; "
         f"T_valley={t_valley:.4f} dB; T={threshold:.1f} dB"
     )
     print(f"Water pixel fraction at T={manifest['water_pixel_fraction']:.6%}")
@@ -1160,6 +1372,21 @@ def _check() -> None:
     for name, entry in manifest["pixels_and_km2_by_district"].items():
         print(f"{name}: flood={entry['flood']['km2']:.3f} km2; pixels={entry['flood']['pixels']:,}")
     print("Taluks: " + ", ".join(t["name"] for t in manifest["taluks"]))
+    kuttanad = next(
+        (entry for name, entry in manifest["pixels_and_km2_by_taluk"].items() if name.casefold() == "kuttanad"),
+        None,
+    )
+    if kuttanad is None:
+        raise RuntimeError("Kuttanad taluk is missing from flood statistics")
+    print(f"Kuttanad flooded={kuttanad['flooded_percent']:.3f}% ({kuttanad['flood_km2']:.3f} km2)")
+    for name, counts in manifest["feature_counts"].items():
+        if "geometry_types" in counts:
+            print(f"{name}: {counts['features']:,} features; geometry types={counts['geometry_types']}")
+        else:
+            print(f"{name}: {counts['pixels']:,} pixels; bands={counts['bands']}")
+    print(f"Quicklook: {CACHE / 'quicklook.png'}")
+    nasa = manifest.get("optional_nasa_crosscheck", {})
+    print(f"NASA cross-check: {nasa.get('status', 'not recorded')}; {nasa.get('path', nasa.get('reason', ''))}")
     print(f"Checked {len(EXPECTED_LAYERS)} layers and matching SHA-256 hashes")
 
 
@@ -1196,7 +1423,7 @@ def prepare(stage: str = "full") -> None:
         print("VV mosaic rebuilt with nodata, zero and non-finite source samples excluded", flush=True)
         return
     if stage == "vectors":
-        _prepare_vector_layers(aoi, projected)
+        _prepare_vector_layers(aoi, projected, force=True)
         print("Vector layers ready", flush=True)
         return
     if stage == "rasters":
@@ -1227,7 +1454,12 @@ def prepare(stage: str = "full") -> None:
         dem_path = dem_full_path if dem_full_path.exists() else LAYERS / "dem_cop30.tif"
         with rasterio.open(dem_path) as src:
             dem = src.read(1)
-        _reference_flood(vv, season, dem, inside, projected, transform, width, height)
+        _, _, flood_stats = _reference_flood(vv, season, dem, inside, projected, transform, width, height)
+        if flood_stats is not None:
+            nasa = _nasa_crosscheck(transform, width, height)
+            flood_stats["optional_nasa_crosscheck"] = nasa
+            _json_write(CACHE / "flood_stats.json", flood_stats)
+            print(f"NASA cross-check: {nasa['status']}; {nasa.get('path', nasa.get('reason', ''))}", flush=True)
         print("Reference flood and quicklook ready", flush=True)
         return
     if stage == "manifest":
@@ -1238,6 +1470,8 @@ def prepare(stage: str = "full") -> None:
         stac_items = _stac_items(aoi)
         rtc_info = json.loads((CACHE / "rtc_units.json").read_text(encoding="utf-8"))
         flood_stats = json.loads((CACHE / "flood_stats.json").read_text(encoding="utf-8"))
+        flood_stats.setdefault("optional_nasa_crosscheck", _nasa_crosscheck(transform, width, height))
+        _json_write(CACHE / "flood_stats.json", flood_stats)
         _write_manifest(aoi, taluks, stac_items, rtc_info, flood_stats)
         print("Manifest written", flush=True)
         return
@@ -1261,11 +1495,17 @@ def prepare(stage: str = "full") -> None:
         print("Reference flood and manifest already exist; checking hashes", flush=True)
         _check()
         return
+    nasa = _nasa_crosscheck(transform, width, height)
+    flood_stats["optional_nasa_crosscheck"] = nasa
+    _json_write(CACHE / "flood_stats.json", flood_stats)
     _write_manifest(aoi, taluks, stac_items, rtc_info, flood_stats)
     print("Phase 2 layers and manifest written", flush=True)
-    print("Optional NASA cross-check skipped (optional, time-boxed step)", flush=True)
+    print(f"NASA cross-check: {nasa['status']}; {nasa.get('path', nasa.get('reason', ''))}", flush=True)
     for name, info in flood_stats["pixels_by_district"].items():
         print(f"{name}: flood={info['flood']['km2']:.3f} km2", flush=True)
+    for name, info in flood_stats["pixels_by_taluk"].items():
+        if name.casefold() == "kuttanad":
+            print(f"{name}: flood={info['flood_km2']:.3f} km2 ({info['flooded_percent']:.3f}% of in-AOI taluk pixels)", flush=True)
     print("Taluks: " + ", ".join(taluks["name"].tolist()), flush=True)
 
 

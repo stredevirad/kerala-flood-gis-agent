@@ -21,8 +21,8 @@ parameters:
     unit: dB
     description: VV backscatter cutoff used to classify water pixels.
     kind: calibrated
-    provenance: Resolved from T in data/kerala/meta/data_manifest.json after Phase 2 acceptance.
-    rationale: Otsu threshold computed from valid VV dB pixels inside the area of interest.
+    provenance: "Histogram-valley threshold (1 dB-smoothed minimum between water and land modes) on the AOI Sentinel-1 VV histogram, 2018-08-21. Otsu (-11.65) and Kittler–Illingworth (-12.55) rejected: biased toward the land mode by class imbalance (water ≈ 15%) and the flooded-vegetation tail. Chosen after inspecting the histogram; sensitivity at ±1 dB is reported."
+    rationale: The 1 dB-smoothed histogram trough separates the water and land modes; sensitivity is reported at thresholds 1 dB below and above the selected value.
     plausible_range: [-22, -13]
   permanent_water_rule:
     value: jrc_seasonality >= 10
