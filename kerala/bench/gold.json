@@ -72,13 +72,13 @@
       "status": "ok",
       "tied": [],
       "unit": "count",
-      "value": 2
+      "value": 93
     },
     "P02": {
       "status": "ok",
       "tied": [],
       "unit": "count",
-      "value": 2
+      "value": 226
     },
     "P03": {
       "status": "ok",
@@ -136,16 +136,17 @@
       "status": "ok",
       "tied": [],
       "unit": "count",
-      "value": 3
+      "value": 68
     },
     "P12": {
       "status": "ok",
       "tied": [],
       "unit": "count",
-      "value": 2
+      "value": 215
     }
   },
   "parameters": {
+    "facility_flood_buffer_m": 250.0,
     "facility_point_rule": "representative_point",
     "flood_date": "2018-08-21",
     "low_lying_max_elevation_m": 10.0,

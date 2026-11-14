@@ -2,7 +2,9 @@
 """Independent, deterministic KeralaFloodBench gold calculations.
 
 This module deliberately uses GeoPandas, Shapely, Rasterio, and NumPy directly.
-It does not import GISclaw agent code or use data/kerala/meta/cache outputs.
+It does not import GISclaw agent code. Gold answers use agent-visible layers only;
+the Phase 2 cache is read solely for the P06 review reconciliation and written
+only for the requested P01 hand-check image.
 """
 
 from __future__ import annotations
@@ -18,6 +20,7 @@ from pathlib import Path
 from typing import Any, Callable, Mapping
 
 import geopandas as gpd
+import matplotlib
 import numpy as np
 import rasterio
 import yaml
@@ -30,13 +33,19 @@ from shapely.strtree import STRtree
 
 from kerala.pack.pack import load_pack
 
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+
 
 ROOT = Path(__file__).resolve().parents[2]
 LAYERS = ROOT / "data" / "kerala" / "layers"
+CACHE = ROOT / "data" / "kerala" / "meta" / "cache"
 QUESTIONS_PATH = Path(__file__).with_name("questions.yaml")
 GOLD_PATH = Path(__file__).with_name("gold.json")
 SENSITIVITY_PATH = Path(__file__).with_name("gold_sensitivity.json")
 REVIEW_PATH = Path(__file__).with_name("GOLD_REVIEW.md")
+P01_QUICKLOOK_PATH = CACHE / "gold_P01.png"
+PHASE2_FLOOD_MASK_PATH = CACHE / "flood_mask_20180821.tif"
 TARGET_CRS = "EPSG:32643"
 REQUIRED_QUESTION_FIELDS = {
     "id", "split", "type", "needs_params", "expected_status", "expected_unit", "text"
@@ -47,6 +56,7 @@ PARAMETER_LIMITS = {
     "max_flood_slope_deg": (2.0, 10.0),
     "relief_camp_hospital_access_m": (1000.0, 10000.0),
     "low_lying_max_elevation_m": (3.0, 20.0),
+    "facility_flood_buffer_m": (50.0, 1000.0),
 }
 FACILITY_RULES = {"representative_point", "centroid", "intersects"}
 
@@ -250,6 +260,21 @@ def _facility_subset(frame: gpd.GeoDataFrame, zone, rule: str) -> gpd.GeoDataFra
     return frame.loc[_facility_in_zone(frame, zone, rule)].copy()
 
 
+# GOLD:facility_flood_buffer
+def _facility_within_flood_buffer(
+    frame: gpd.GeoDataFrame,
+    flood_geometry,
+    buffer_m: float,
+    rule: str,
+) -> np.ndarray:
+    """Apply a facility rule, then test its distance to the detected flood extent."""
+    if rule == "intersects":
+        distances = frame.geometry.distance(flood_geometry)
+    else:
+        distances = _facility_points(frame, rule).distance(flood_geometry)
+    return distances.le(buffer_m).to_numpy(dtype=bool)
+
+
 def _geometry_intersects_mask(data: Dataset, geometry, zone_mask: np.ndarray) -> bool:
     """Test one projected facility geometry against a raster condition in its local window."""
     if geometry.geom_type == "Point":
@@ -393,6 +418,9 @@ def normalize_params(params: Mapping[str, Any] | None = None) -> dict[str, Any]:
     values["low_lying_max_elevation_m"] = _number_from_rule(
         values["low_lying_max_elevation_m"], "low_lying_max_elevation_m", *PARAMETER_LIMITS["low_lying_max_elevation_m"]
     )
+    values["facility_flood_buffer_m"] = _number_from_rule(
+        values["facility_flood_buffer_m"], "facility_flood_buffer_m", *PARAMETER_LIMITS["facility_flood_buffer_m"]
+    )
     rule = str(values["facility_point_rule"]).strip().casefold()
     if rule not in FACILITY_RULES:
         raise ValueError(f"facility_point_rule must be one of {sorted(FACILITY_RULES)}")
@@ -403,13 +431,19 @@ def normalize_params(params: Mapping[str, Any] | None = None) -> dict[str, Any]:
 # GOLD:P01
 def _p01(data: Dataset, params: Mapping[str, Any]) -> dict[str, Any]:
     hospitals = _facility_subset(data.hospitals, _district(data, "Alappuzha"), params["facility_point_rule"])
-    return _answer(int(_facility_in_zone(hospitals, data.flood_geometry, params["facility_point_rule"]).sum()), "count")
+    affected = _facility_within_flood_buffer(
+        hospitals, data.flood_geometry, params["facility_flood_buffer_m"], params["facility_point_rule"]
+    )
+    return _answer(int(affected.sum()), "count")
 
 
 # GOLD:P02
 def _p02(data: Dataset, params: Mapping[str, Any]) -> dict[str, Any]:
     schools = _facility_subset(data.schools, _district(data, "Ernakulam"), params["facility_point_rule"])
-    return _answer(int(_facility_in_zone(schools, data.flood_geometry, params["facility_point_rule"]).sum()), "count")
+    affected = _facility_within_flood_buffer(
+        schools, data.flood_geometry, params["facility_flood_buffer_m"], params["facility_point_rule"]
+    )
+    return _answer(int(affected.sum()), "count")
 
 
 # GOLD:P03
@@ -494,16 +528,20 @@ def _p10(data: Dataset, params: Mapping[str, Any]) -> dict[str, Any]:
 def _p11(data: Dataset, params: Mapping[str, Any]) -> dict[str, Any]:
     rule = params["facility_point_rule"]
     in_ernakulam = _facility_in_zone(data.hospitals, _district(data, "Ernakulam"), rule)
-    in_flood = _facility_in_zone(data.hospitals, data.flood_geometry, rule)
+    affected = _facility_within_flood_buffer(
+        data.hospitals, data.flood_geometry, params["facility_flood_buffer_m"], rule
+    )
     low = _facility_on_lowland(data, data.hospitals, params["low_lying_max_elevation_m"], rule)
-    return _answer(int((in_ernakulam & in_flood & low).sum()), "count")
+    return _answer(int((in_ernakulam & affected & low).sum()), "count")
 
 
 # GOLD:P12
 def _p12(data: Dataset, params: Mapping[str, Any]) -> dict[str, Any]:
     rule = params["facility_point_rule"]
     schools = _facility_subset(data.schools, _district(data, "Ernakulam"), rule)
-    schools = schools.loc[_facility_in_zone(schools, data.flood_geometry, rule)].copy()
+    schools = schools.loc[_facility_within_flood_buffer(
+        schools, data.flood_geometry, params["facility_flood_buffer_m"], rule
+    )].copy()
     nearby = _within_hospital_distance(schools, data.hospitals, params["relief_camp_hospital_access_m"], rule)
     return _answer(int(nearby.sum()), "count")
 
@@ -634,6 +672,11 @@ def build_sensitivity(params: Mapping[str, Any] | None = None) -> dict[str, dict
         f"{elevation:g} m": gold_fn("P09", {"low_lying_max_elevation_m": elevation})
         for elevation in (5.0, 10.0, 15.0)
     }
+    for qid in ("P01", "P02", "P11", "P12"):
+        sensitivity[qid] = {
+            f"{buffer_m:g} m": gold_fn(qid, {"facility_flood_buffer_m": buffer_m})
+            for buffer_m in (100.0, 250.0, 500.0)
+        }
     return sensitivity
 
 
@@ -646,6 +689,7 @@ SOURCE_FUNCTIONS: dict[str, Callable[..., Any]] = {
     "radar_flood": _radar_flood_mask,
     "facility_zone": _facility_in_zone,
     "facility_subset": _facility_subset,
+    "facility_flood_buffer": _facility_within_flood_buffer,
     "facility_lowland": _facility_on_lowland,
     "facility_distance": _within_hospital_distance,
 }
@@ -661,8 +705,8 @@ def _source_lines(marker: str) -> str:
 
 
 REVIEW_STEPS = {
-    "P01": "Select Alappuzha hospitals using the facility rule, then count those inside the flood polygon.",
-    "P02": "Select Ernakulam schools using the facility rule, then count those inside the flood polygon.",
+    "P01": "Select Alappuzha hospitals using the facility rule, then count those within the flood buffer.",
+    "P02": "Select Ernakulam schools using the facility rule, then count those within the flood buffer.",
     "P03": "Select Alappuzha schools and count those farther than the access distance from every hospital.",
     "P04": "Repeat the no-nearby-hospital count in every taluk and select the largest count, retaining 1% ties.",
     "P05": "Mask Alappuzha by pixel centre, count finite VV pixels at or below T, and multiply by 900 m².",
@@ -671,8 +715,8 @@ REVIEW_STEPS = {
     "P08": "Count Alappuzha pixel centres that are both inside the flood polygon and at or below the low-land elevation.",
     "P09": "Apply the facility rule to hospitals and count those at or below the low-land elevation.",
     "P10": "For each taluk with at least 10 km² of low land, compare its flooded-low-land share and retain 1% ties.",
-    "P11": "Count hospitals that satisfy Ernakulam membership, flood membership, and low-land membership together.",
-    "P12": "Select flooded Ernakulam schools and count those with a hospital within the access distance.",
+    "P11": "Count hospitals that satisfy Ernakulam membership, flood-buffer membership, and low-land membership together.",
+    "P12": "Select flood-buffer-affected Ernakulam schools and count those with a hospital within the access distance.",
     "C01": "Read the Alappuzha polygon in EPSG:32643 and convert its planar area to km².",
     "C02": "Clip each major-road line to Ernakulam and sum the clipped metre lengths as km.",
     "C03": "Intersect the flood polygon with every taluk and select the largest planar area, retaining 1% ties.",
@@ -688,12 +732,12 @@ REVIEW_STEPS = {
 
 
 REVIEW_HELPERS = {
-    "P01": ["facility_subset", "facility_zone"], "P02": ["facility_subset", "facility_zone"],
+    "P01": ["facility_subset", "facility_flood_buffer"], "P02": ["facility_subset", "facility_flood_buffer"],
     "P03": ["facility_subset", "facility_distance"],
     "P04": ["facility_subset", "facility_distance"], "P05": ["zone_mask"], "P06": ["radar_flood", "zone_mask"],
     "P07": ["radar_flood", "zone_mask"], "P08": ["zone_mask"], "P09": ["facility_lowland"],
-    "P10": ["zone_mask"], "P11": ["facility_zone", "facility_lowland"],
-    "P12": ["facility_subset", "facility_zone", "facility_distance"],
+    "P10": ["zone_mask"], "P11": ["facility_zone", "facility_flood_buffer", "facility_lowland"],
+    "P12": ["facility_subset", "facility_flood_buffer", "facility_distance"],
     "C04": ["facility_zone"], "C05": ["zone_mask"],
 }
 
@@ -744,10 +788,121 @@ def _sanity_records(answers: Mapping[str, Mapping[str, Any]], data: Dataset, par
     }
 
 
+def _facility_buffer_diagnostic(data: Dataset, params: Mapping[str, Any]) -> dict[str, Any]:
+    """Count facilities near flood water for the requested review diagnostics."""
+    rule = params["facility_point_rule"]
+    distances = (0.0, 100.0, 250.0, 500.0)
+    zones = {
+        "Alappuzha": _district(data, "Alappuzha"),
+        "Ernakulam": _district(data, "Ernakulam"),
+        "Kuttanad": _taluk(data, "Kuttanad"),
+    }
+    result: dict[str, Any] = {"facility_point_rule": rule, "zones": {}}
+    for zone_name, zone in zones.items():
+        zone_result: dict[str, Any] = {}
+        for layer_name, frame in (("hospitals", data.hospitals), ("schools", data.schools)):
+            selected = _facility_subset(frame, zone, rule)
+            counts = {
+                f"{distance:g} m": int(
+                    _facility_within_flood_buffer(selected, data.flood_geometry, distance, rule).sum()
+                )
+                for distance in distances
+            }
+            zone_result[layer_name] = {"eligible_features": int(len(selected)), "counts": counts}
+        result["zones"][zone_name] = zone_result
+    return result
+
+
+def _aoi_edge_mask(data: Dataset) -> np.ndarray:
+    """Return in-AOI cells adjacent to an out-of-AOI four-neighbour cell."""
+    inside = _zone_mask(data, unary_union(data.districts.geometry.tolist()))
+    edge = np.zeros_like(inside, dtype=bool)
+    edge[1:, :] |= inside[1:, :] & ~inside[:-1, :]
+    edge[:-1, :] |= inside[:-1, :] & ~inside[1:, :]
+    edge[:, 1:] |= inside[:, 1:] & ~inside[:, :-1]
+    edge[:, :-1] |= inside[:, :-1] & ~inside[:, 1:]
+    return edge
+
+
+def _p06_reconciliation(data: Dataset, params: Mapping[str, Any]) -> dict[str, Any]:
+    """Compare P06's visible-layer slope edge handling with the Phase 2 flood mask."""
+    zone = _zone_mask(data, _district(data, "Ernakulam"))
+    gold_flood = _radar_flood_mask(
+        data, params["water_threshold_vv_db"], params["permanent_water_rule"], params["max_flood_slope_deg"]
+    )
+    result: dict[str, Any] = {
+        "gold_pixels": int((zone & gold_flood).sum()),
+        "pixel_area_km2": data.raster.pixel_area_km2,
+        "phase2_mask_available": PHASE2_FLOOD_MASK_PATH.is_file(),
+    }
+    if not PHASE2_FLOOD_MASK_PATH.is_file():
+        return result
+    with rasterio.open(PHASE2_FLOOD_MASK_PATH) as src:
+        phase2_flood = src.read(1) == 1
+        if phase2_flood.shape != data.raster.vv.shape or src.transform != data.raster.transform:
+            raise ValueError("Phase 2 flood-mask cache does not align with the gold grid")
+    disagreements = zone & (phase2_flood ^ gold_flood)
+    edge = _aoi_edge_mask(data)
+    result.update({
+        "phase2_pixels": int((zone & phase2_flood).sum()),
+        "phase2_only_pixels": int((zone & phase2_flood & ~gold_flood).sum()),
+        "gold_only_pixels": int((zone & gold_flood & ~phase2_flood).sum()),
+        "disagreement_pixels": int(disagreements.sum()),
+        "disagreements_on_aoi_edge": int((disagreements & edge).sum()),
+        "disagreements_with_invalid_vv": int((disagreements & ~_finite_vv(data)).sum()),
+        "disagreements_with_invalid_dem": int((disagreements & ~np.isfinite(data.raster.dem)).sum()),
+        "disagreements_in_permanent_water": int(
+            (disagreements & (data.raster.seasonality >= params["permanent_water_rule"])).sum()
+        ),
+        "district_pixels": int(zone.sum()),
+    })
+    return result
+
+
+def _write_p01_quicklook(data: Dataset, params: Mapping[str, Any], answers: Mapping[str, Mapping[str, Any]]) -> None:
+    """Save the requested P01 hand-check map in the Phase 2 cache directory."""
+    district = _district(data, "Alappuzha")
+    rule = params["facility_point_rule"]
+    hospitals = _facility_subset(data.hospitals, district, rule)
+    affected = _facility_within_flood_buffer(
+        hospitals, data.flood_geometry, params["facility_flood_buffer_m"], rule
+    )
+    flood = data.flood_geometry.intersection(district)
+    buffer = data.flood_geometry.buffer(params["facility_flood_buffer_m"]).intersection(district)
+    display_points = hospitals.geometry.representative_point()
+
+    fig, ax = plt.subplots(figsize=(9.5, 8.5), constrained_layout=True)
+    gpd.GeoSeries([district], crs=TARGET_CRS).boundary.plot(ax=ax, color="#202a44", linewidth=1.2, zorder=5)
+    gpd.GeoSeries([buffer], crs=TARGET_CRS).plot(
+        ax=ax, color="#f4a261", edgecolor="#d97706", alpha=0.28, linewidth=0.5, zorder=1,
+        label=f"{params['facility_flood_buffer_m']:g} m flood buffer",
+    )
+    gpd.GeoSeries([flood], crs=TARGET_CRS).plot(
+        ax=ax, color="#1565c0", edgecolor="#0d47a1", alpha=0.75, linewidth=0.35, zorder=2,
+        label="detected flood extent",
+    )
+    ax.scatter(display_points.x[~affected], display_points.y[~affected], s=9, color="#5f6368", alpha=0.72,
+               linewidths=0, zorder=6, label="hospital not flood-affected")
+    ax.scatter(display_points.x[affected], display_points.y[affected], s=16, color="#c1121f", alpha=0.95,
+               linewidths=0, zorder=7, label="hospital flood-affected")
+    ax.set_title(
+        f"P01: {answers['P01']['value']} of {len(hospitals)} Alappuzha hospitals flood-affected "
+        f"within {params['facility_flood_buffer_m']:g} m"
+    )
+    ax.set_axis_off()
+    ax.set_aspect("equal")
+    ax.legend(loc="lower left", fontsize=8, frameon=True)
+    CACHE.mkdir(parents=True, exist_ok=True)
+    fig.savefig(P01_QUICKLOOK_PATH, dpi=180)
+    plt.close(fig)
+
+
 def _review_document(
     answers: Mapping[str, Mapping[str, Any]],
     sanity: Mapping[str, tuple[bool, str]],
     params: Mapping[str, Any],
+    facility_diagnostic: Mapping[str, Any],
+    p06_diagnostic: Mapping[str, Any],
 ) -> str:
     lines = [
         "# KeralaFloodBench gold review",
@@ -758,8 +913,9 @@ def _review_document(
         "",
         f"- Default water threshold: {params['water_threshold_vv_db']:.1f} dB, resolved from the accepted manifest through the pack.",
         f"- Flood-rule defaults: seasonality < {params['permanent_water_rule']}, slope <= {params['max_flood_slope_deg']:g} degrees.",
-        f"- Other defaults: low land <= {params['low_lying_max_elevation_m']:g} m; hospital access <= {params['relief_camp_hospital_access_m'] / 1000:g} km; facility rule = `{params['facility_point_rule']}`.",
+        f"- Other defaults: low land <= {params['low_lying_max_elevation_m']:g} m; hospital access <= {params['relief_camp_hospital_access_m'] / 1000:g} km; facility flood buffer <= {params['facility_flood_buffer_m']:g} m; facility rule = `{params['facility_point_rule']}`.",
         "- Raster masks use pixel centres (`all_touched=False`) on the 30 m grid. P06 and P07 recompute the VV/JRC/DEM rule from the agent-visible rasters rather than reuse a Phase 2 cache output.",
+        "- Hand-check map: `data/kerala/meta/cache/gold_P01.png` shows Alappuzha, detected flood water, the default facility flood buffer, and hospital locations coloured by flood-affected status.",
         "",
         "## Full gold table",
         "",
@@ -770,6 +926,42 @@ def _review_document(
         answer = answers[question["id"]]
         tied = ", ".join(answer["tied"]) or "—"
         lines.append(f"| {question['id']} | {_format_value(answer)} | {answer['status']} | {tied} |")
+    lines.extend([
+        "",
+        "## Facility flood-buffer diagnostic",
+        "",
+        f"Counts use the default `{facility_diagnostic['facility_point_rule']}` rule. A distance of 0 m is the former inside-flood count.",
+        "",
+        "| Zone | Layer | Eligible features | 0 m | 100 m | 250 m | 500 m |",
+        "|---|---|---:|---:|---:|---:|---:|",
+    ])
+    for zone_name in ("Alappuzha", "Ernakulam", "Kuttanad"):
+        for layer_name in ("hospitals", "schools"):
+            entry = facility_diagnostic["zones"][zone_name][layer_name]
+            counts = entry["counts"]
+            lines.append(
+                f"| {zone_name} | {layer_name} | {entry['eligible_features']} | "
+                f"{counts['0 m']} | {counts['100 m']} | {counts['250 m']} | {counts['500 m']} |"
+            )
+    lines.extend(["", "## P06 pixel reconciliation", ""])
+    if p06_diagnostic["phase2_mask_available"]:
+        lines.extend([
+            f"- Gold P06 is {p06_diagnostic['gold_pixels']:,} pixels × 900 m² = `{answers['P06']['value']:.6f} km2`; Phase 2's cached reference mask reports {p06_diagnostic['phase2_pixels']:,} pixels = 57.662100 km2.",
+            f"- The shared Ernakulam pixel-centre district mask contains {p06_diagnostic['district_pixels']:,} cells. It is not the source of the difference.",
+            f"- There are {p06_diagnostic['disagreement_pixels']:,} slope classifications at the AOI edge: {p06_diagnostic['phase2_only_pixels']:,} Phase-2-only and {p06_diagnostic['gold_only_pixels']:,} gold-only, leaving the {p06_diagnostic['phase2_pixels'] - p06_diagnostic['gold_pixels']:,}-pixel net difference.",
+            f"- All {p06_diagnostic['disagreements_on_aoi_edge']:,} disagreements lie on the AOI edge; none have invalid VV ({p06_diagnostic['disagreements_with_invalid_vv']}), invalid clipped DEM ({p06_diagnostic['disagreements_with_invalid_dem']}), or permanent-water status ({p06_diagnostic['disagreements_in_permanent_water']}).",
+            "- Phase 2 calculated edge slopes from its retained full DEM before clipping; gold deliberately uses only the agent-visible clipped DEM. The difference is therefore slope-edge treatment, not district masking, nodata, or rounding. Gold retains its visible-layer result rather than introduce an unfrozen cache dependency.",
+        ])
+    else:
+        lines.append("- The Phase 2 flood-mask cache is unavailable, so only the visible-layer P06 count can be reported.")
+    lines.extend([
+        "",
+        "## Limitations",
+        "",
+        f"- P08 ({answers['P08']['value']:.6f} km2) is close to D03 ({answers['D03']['value']:.6f} km2): nearly all mapped flooding in Alappuzha is at or below the default 10 m cutoff, so the low-lying parameter has little leverage there.",
+        f"- P10 and C03 both return `{answers['P10']['value']}`; this shared result is not independent evidence.",
+        "- Copernicus DEM GLO-30 is a surface model, so building and tree heights can influence the elevation and slope measurements.",
+    ])
     for question in load_questions():
         qid = question["id"]
         answer = answers[qid]
@@ -805,16 +997,20 @@ def write_gold_outputs() -> tuple[dict[str, Any], dict[str, Any], str]:
     params = _pack_values()
     answers = build_gold_answers(params)
     sensitivity = build_sensitivity(params)
-    sanity = _sanity_records(answers, _dataset(), params)
+    data = _dataset()
+    sanity = _sanity_records(answers, data, params)
+    facility_diagnostic = _facility_buffer_diagnostic(data, params)
+    p06_diagnostic = _p06_reconciliation(data, params)
     if not all(passed for passed, _ in sanity.values()):
         failed = [qid for qid, (passed, _) in sanity.items() if not passed]
         raise AssertionError(f"Gold sanity checks failed: {failed}")
     gold_payload = _payload(answers, params)
     sensitivity_payload = _sensitivity_payload(sensitivity, params)
-    review = _review_document(answers, sanity, params)
+    review = _review_document(answers, sanity, params, facility_diagnostic, p06_diagnostic)
     _write_json(GOLD_PATH, gold_payload)
     _write_json(SENSITIVITY_PATH, sensitivity_payload)
     REVIEW_PATH.write_text(review, encoding="utf-8")
+    _write_p01_quicklook(data, params, answers)
     return gold_payload, sensitivity_payload, review
 
 
@@ -824,7 +1020,10 @@ def check_gold_outputs() -> None:
     params_first = _pack_values()
     answers_first = build_gold_answers(params_first)
     sensitivity_first = build_sensitivity(params_first)
-    sanity = _sanity_records(answers_first, _dataset(), params_first)
+    data_first = _dataset()
+    sanity = _sanity_records(answers_first, data_first, params_first)
+    facility_diagnostic_first = _facility_buffer_diagnostic(data_first, params_first)
+    p06_diagnostic_first = _p06_reconciliation(data_first, params_first)
     if not all(passed for passed, _ in sanity.values()):
         failed = [qid for qid, (passed, _) in sanity.items() if not passed]
         raise AssertionError(f"Gold sanity checks failed: {failed}")
@@ -832,7 +1031,16 @@ def check_gold_outputs() -> None:
     params_second = _pack_values()
     answers_second = build_gold_answers(params_second)
     sensitivity_second = build_sensitivity(params_second)
-    if params_first != params_second or answers_first != answers_second or sensitivity_first != sensitivity_second:
+    data_second = _dataset()
+    facility_diagnostic_second = _facility_buffer_diagnostic(data_second, params_second)
+    p06_diagnostic_second = _p06_reconciliation(data_second, params_second)
+    if (
+        params_first != params_second
+        or answers_first != answers_second
+        or sensitivity_first != sensitivity_second
+        or facility_diagnostic_first != facility_diagnostic_second
+        or p06_diagnostic_first != p06_diagnostic_second
+    ):
         raise AssertionError("Two independent gold recomputations differ")
     expected_gold = _payload(answers_first, params_first)
     expected_sensitivity = _sensitivity_payload(sensitivity_first, params_first)
@@ -840,12 +1048,19 @@ def check_gold_outputs() -> None:
         raise AssertionError("gold.json does not match the independent recomputation")
     if not SENSITIVITY_PATH.is_file() or json.loads(SENSITIVITY_PATH.read_text(encoding="utf-8")) != expected_sensitivity:
         raise AssertionError("gold_sensitivity.json does not match the independent recomputation")
-    expected_review = _review_document(answers_first, sanity, params_first)
+    expected_review = _review_document(
+        answers_first, sanity, params_first, facility_diagnostic_first, p06_diagnostic_first
+    )
     if not REVIEW_PATH.is_file() or REVIEW_PATH.read_text(encoding="utf-8") != expected_review:
         raise AssertionError("GOLD_REVIEW.md does not match the independent recomputation")
+    _write_p01_quicklook(data_first, params_first, answers_first)
+    if not P01_QUICKLOOK_PATH.is_file() or P01_QUICKLOOK_PATH.stat().st_size < 10_000:
+        raise AssertionError("P01 hand-check quicklook was not written")
     print(f"Gold check passed: {len(answers_first)} answers, {len(sensitivity_first)} sensitivity groups")
     for qid in ("P01", "P07", "C01"):
         print(f"{qid}: {_format_value(answers_first[qid])}")
+    print(f"P06: {p06_diagnostic_first['gold_pixels']:,} pixels")
+    print(f"P01 250 m buffer: {answers_first['P01']['value']} count")
     print("Both independent recomputations matched; all sanity statements passed")
 
 

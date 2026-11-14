@@ -3,17 +3,17 @@ questions:
   - id: P01
     split: test
     type: parameter
-    needs_params: [facility_point_rule]
+    needs_params: [facility_point_rule, facility_flood_buffer_m]
     expected_status: ok
     expected_unit: count
-    text: How many mapped hospitals in Alappuzha district were inside the flood extent on 21 August 2018?
+    text: How many mapped hospitals in Alappuzha district were flood-affected (within the facility flood buffer of the flood extent on 21 August 2018)?
   - id: P02
     split: test
     type: parameter
-    needs_params: [facility_point_rule]
+    needs_params: [facility_point_rule, facility_flood_buffer_m]
     expected_status: ok
     expected_unit: count
-    text: How many mapped schools in Ernakulam district were inside the flood extent on 21 August 2018?
+    text: How many mapped schools in Ernakulam district were flood-affected (within the facility flood buffer of the flood extent on 21 August 2018)?
   - id: P03
     split: test
     type: parameter
@@ -73,17 +73,17 @@ questions:
   - id: P11
     split: test
     type: parameter
-    needs_params: [low_lying_max_elevation_m, facility_point_rule]
+    needs_params: [low_lying_max_elevation_m, facility_point_rule, facility_flood_buffer_m]
     expected_status: ok
     expected_unit: count
-    text: How many mapped hospitals in Ernakulam district were both inside the flood extent on 21 August 2018 and on low-lying land?
+    text: How many mapped hospitals in Ernakulam district were both flood-affected (within the facility flood buffer of the flood extent on 21 August 2018) and on low-lying land?
   - id: P12
     split: test
     type: parameter
-    needs_params: [relief_camp_hospital_access_m, facility_point_rule]
+    needs_params: [relief_camp_hospital_access_m, facility_point_rule, facility_flood_buffer_m]
     expected_status: ok
     expected_unit: count
-    text: How many mapped schools in Ernakulam district that were inside the flood extent on 21 August 2018 had a hospital within the relief-camp hospital access distance?
+    text: How many mapped schools in Ernakulam district that were flood-affected (within the facility flood buffer of the flood extent on 21 August 2018) had a hospital within the relief-camp hospital access distance?
   - id: C01
     split: test
     type: control

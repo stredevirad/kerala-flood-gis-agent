@@ -93,10 +93,12 @@ All runs used GISReActAgent on examples\urban-heat-madison, task "Compute the me
 - Whole-system RAM was sampled because the Ollama model runner shares the Intel Arc system memory; Python-process memory alone is not representative.
 - Earlier, Kirito approved rebuilding only the Sentinel-1 VV mosaic and selecting KI if its range/agreement gate passed; the subsequent decision below supersedes KI as the selected method. Otsu and KI remain diagnostics.
 - Kirito superseded the KI-gated threshold selection after reviewing the histogram: choose T=-14.0 dB from T_valley=-13.95 dB using conventional half-up rounding. T_ki=-12.55 dB missed the prior range by 0.45 dB; the water/land trough is selected because the seasonality 1–9 flooded-vegetation tail biases Otsu and breaks KI's Gaussian-class assumption. Keep the [-22,-13] plausible range and all rubric ranges unchanged. Pack provenance is updated as instructed. This is a post-hoc threshold choice to describe in REPORT.md during Phase 6.
+- Kirito revised the Phase 4 facility definition before approval: a facility is flood-affected when its selected representative point/centroid, or its polygon under `intersects`, lies within a 250 m buffer of the detected flood extent. The new project-convention pack key is `facility_flood_buffer_m`, with a 50–1,000 m defensible range and 100/250/500 m sensitivity.
+- The Phase 4 P06 reconciliation keeps the 64,000-pixel visible-layer result. Phase 2's 64,069-pixel reference uses a full DEM before AOI clipping for slope gradients; 121 AOI-edge slope classifications differ (95 Phase-2-only and 26 gold-only), yielding the 69-pixel net difference. This is not caused by the district mask, VV/JRC/DEM nodata, or rounding, and is documented in GOLD_REVIEW.md rather than changing the source layers or threshold.
 - No Phase 0 acceptance item was skipped.
 
 ## Needs Kirito
-- Phase 4 STOP gate: `kerala/bench/GOLD_REVIEW.md` contains the full 23-question gold table, plain-language calculation steps, exact function-line references, and a passing sanity statement for each answer. Please read it, line-review `kerala/bench/gold.py`, and hand-check P01, P07, and C01. The acceptance command passed and neither `kerala/bench/frozen.json` nor `tests/test_kerala_frozen.py` exists. Reply exactly `gold approved` to authorize the freeze, or provide corrections; do not start Phase 5 yet.
+- Phase 4 STOP gate remains open after the facility-buffer review changes. `kerala/bench/GOLD_REVIEW.md` contains the revised full 23-question gold table, the buffer diagnostic, P06 reconciliation, limitations, exact function-line references, and passing sanity statements. Please read it, line-review `kerala/bench/gold.py`, and hand-check P01, P07, and C01. The acceptance command and 27 Phase 3 tests passed; neither `kerala/bench/frozen.json` nor `tests/test_kerala_frozen.py` exists. Reply exactly `gold approved` to authorize the freeze, or provide corrections; do not start Phase 5 yet.
 - Kirito explicitly resumed the work by directing Phase 1 after the Phase 0 STOP gate. The smoke task failures remain documented: Vulkan reached the 12-round limit; CPU stopped on repeated-code detection. The projected local matrix is below 20 hours, so no cut is required by the prompt.
 - The initial pre-rebuild Otsu stop and later KI-gate STOP are superseded by Kirito's post-hoc valley decision recorded under Decisions made. No plausible range or rubric range changed.
 - Pre-rebuild Phase 2 threshold diagnosis (historical; superseded by the approved rerun below):
@@ -131,13 +133,14 @@ All runs used GISReActAgent on examples\urban-heat-madison, task "Compute the me
 - Schema-v1 pack YAML and `kerala.pack.pack` now provide schema checking, manifest binding, value-free parameter indexing, and per-run `domain_param` call logging.
 - `AnswerChecker` and `KeralaAgent` now enforce answer shape/unit/range rules, preserve numbered answer attempts, call GISclaw's built-in output guard, and append checker records without accessing pack values.
 - Prompt and task builders now reuse GISclaw's `SYSTEM_PROMPT`, skill and data blocks, add the value-free pack index only in the pack arm, keep parameter task sections arm-specific, and profile the dataset through the existing junction helper.
-- Phase 3 acceptance passed: 26 offline tests. Tests use a temporary manifest value inside the declared range; with Phase 2 accepted, the production pack resolves T=-14.0 dB from the manifest.
+- Phase 3 acceptance passed: 27 offline tests after adding the facility-flood-buffer pack and leak coverage. Tests use a temporary manifest value inside the declared range; with Phase 2 accepted, the production pack resolves T=-14.0 dB from the manifest.
 
 ## Phase 4 execution (gold-review STOP gate)
 - Created `kerala/bench/questions.yaml` with the exact 12 parameter, 8 control, and 3 development questions; created `rubric.yaml` with the instructed tolerances and defensible parameter ranges.
 - `kerala/bench/gold.py` is independent of `src.agent`, reads the nine agent-visible layers directly with GeoPandas, Shapely, Rasterio, and NumPy, and resolves the accepted `T=-14.0 dB` through the pack/manifest. P06 and P07 recompute the VV/JRC/DEM flood rule from the visible rasters rather than reuse a Phase 2 cache result.
-- The complete deterministic answer table is in `kerala/bench/gold.json` and `kerala/bench/GOLD_REVIEW.md`. Default results include P01=2, P07=56.236341%, C01=1,417.757234 km2, and all 23 results have status/unit validation and a documented sanity statement.
-- `kerala/bench/gold_sensitivity.json` records P05/P06 at -15/-14/-13 dB, P03 at 1/3/5 km, and P09 at 5/10/15 m. Direct defensible overrides were also exercised for all three facility rules and a non-default radar-parameter combination.
+- The revised facility definition adds `facility_flood_buffer_m=250` m to the pack and rubric. P01, P02, P11, and P12 use point/centroid-to-flood distance or polygon-to-flood distance for `intersects`; their default gold values are 93, 226, 68, and 215 respectively.
+- The complete deterministic answer table is in `kerala/bench/gold.json` and `kerala/bench/GOLD_REVIEW.md`. P06 is exactly 64,000 pixels or 57.600000 km2; the review records the 69-pixel, AOI-edge slope difference from Phase 2's full-DEM calculation. P07=56.236341% and C01=1,417.757234 km2; all 23 results have status/unit validation and a documented sanity statement.
+- `kerala/bench/gold_sensitivity.json` records P05/P06 at -15/-14/-13 dB, P03 at 1/3/5 km, P09 at 5/10/15 m, and P01/P02/P11/P12 at 100/250/500 m flood buffers. The review also contains the requested hospital/school buffer counts for Alappuzha, Ernakulam, and Kuttanad. The P01 hand-check map is `data/kerala/meta/cache/gold_P01.png`.
 - The Phase 4 artifacts are deliberately not frozen. No `frozen.json` or `test_kerala_frozen.py` has been created.
 
 ## Phase 4 acceptance
@@ -146,10 +149,12 @@ Command:
 
 Last 15 output lines:
 ```text
-Gold check passed: 23 answers, 4 sensitivity groups
-P01: 2 count
+Gold check passed: 23 answers, 8 sensitivity groups
+P01: 93 count
 P07: 56.236341 percent
 C01: 1417.757234 km2
+P06: 64,000 pixels
+P01 250 m buffer: 93 count
 Both independent recomputations matched; all sanity statements passed
 ```
 
@@ -279,5 +284,5 @@ The five failing baseline tests are identical to the Phase 0 failures; no regres
 Phase 3 acceptance command:
 .\.venv\Scripts\python.exe -m pytest -q tests\test_kerala_pack.py tests\test_kerala_checker.py tests\test_kerala_leak.py
 Last output:
-..........................                                               [100%]
-26 passed in 1.63s
+...........................                                              [100%]
+27 passed in 1.20s

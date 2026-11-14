@@ -18,10 +18,15 @@ def test_schema_v1_resolves_calibrated_threshold(tmp_path):
     pack = load_pack(manifest_path=manifest)
 
     assert pack["schema_version"] == 1
-    assert len(pack["parameters"]) == 9
+    assert len(pack["parameters"]) == 10
     threshold = pack["parameters"]["water_threshold_vv_db"]
     assert threshold["value"] == -18.4
     assert threshold["kind"] == "calibrated"
+    facility_buffer = pack["parameters"]["facility_flood_buffer_m"]
+    assert facility_buffer["value"] == 250
+    assert facility_buffer["unit"] == "m"
+    assert facility_buffer["kind"] == "project_convention"
+    assert facility_buffer["plausible_range"] == [50, 1000]
     for parameter in pack["parameters"].values():
         assert set(parameter) == {
             "value", "unit", "description", "kind", "provenance", "rationale", "plausible_range"
@@ -41,13 +46,17 @@ def test_manifest_threshold_outside_declared_range_is_rejected(tmp_path):
 
 def test_index_text_lists_only_requested_keys_and_no_values(tmp_path):
     pack = load_pack(manifest_path=_manifest(tmp_path / "manifest.json"))
-    text = index_text(["water_threshold_vv_db", "max_flood_slope_deg"], pack=pack)
+    text = index_text(
+        ["water_threshold_vv_db", "max_flood_slope_deg", "facility_flood_buffer_m"], pack=pack
+    )
 
     assert "water_threshold_vv_db" in text
     assert "max_flood_slope_deg" in text
+    assert "facility_flood_buffer_m" in text
     assert "project_crs" not in text
     assert "-18.4" not in text
     assert "5 degree" not in text
+    assert "250" not in text
 
 
 def test_domain_param_returns_provenance_and_logs_every_call(tmp_path):

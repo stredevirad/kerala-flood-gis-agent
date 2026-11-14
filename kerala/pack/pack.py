@@ -29,6 +29,7 @@ EXPECTED_KEYS = (
     "low_lying_max_elevation_m",
     "relief_camp_hospital_access_m",
     "facility_point_rule",
+    "facility_flood_buffer_m",
     "raster_area_rule",
 )
 DOMAIN_PARAM_DESCRIPTION = (

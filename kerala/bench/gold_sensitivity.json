@@ -1,5 +1,45 @@
 {
   "answers": {
+    "P01": {
+      "100 m": {
+        "status": "ok",
+        "tied": [],
+        "unit": "count",
+        "value": 34
+      },
+      "250 m": {
+        "status": "ok",
+        "tied": [],
+        "unit": "count",
+        "value": 93
+      },
+      "500 m": {
+        "status": "ok",
+        "tied": [],
+        "unit": "count",
+        "value": 158
+      }
+    },
+    "P02": {
+      "100 m": {
+        "status": "ok",
+        "tied": [],
+        "unit": "count",
+        "value": 56
+      },
+      "250 m": {
+        "status": "ok",
+        "tied": [],
+        "unit": "count",
+        "value": 226
+      },
+      "500 m": {
+        "status": "ok",
+        "tied": [],
+        "unit": "count",
+        "value": 552
+      }
+    },
     "P03": {
       "1 km": {
         "status": "ok",
@@ -79,9 +119,50 @@
         "unit": "count",
         "value": 78
       }
+    },
+    "P11": {
+      "100 m": {
+        "status": "ok",
+        "tied": [],
+        "unit": "count",
+        "value": 25
+      },
+      "250 m": {
+        "status": "ok",
+        "tied": [],
+        "unit": "count",
+        "value": 68
+      },
+      "500 m": {
+        "status": "ok",
+        "tied": [],
+        "unit": "count",
+        "value": 108
+      }
+    },
+    "P12": {
+      "100 m": {
+        "status": "ok",
+        "tied": [],
+        "unit": "count",
+        "value": 55
+      },
+      "250 m": {
+        "status": "ok",
+        "tied": [],
+        "unit": "count",
+        "value": 215
+      },
+      "500 m": {
+        "status": "ok",
+        "tied": [],
+        "unit": "count",
+        "value": 517
+      }
     }
   },
   "parameters": {
+    "facility_flood_buffer_m": 250.0,
     "facility_point_rule": "representative_point",
     "flood_date": "2018-08-21",
     "low_lying_max_elevation_m": 10.0,

@@ -35,3 +35,6 @@ defensible_ranges:
     maximum: 20
   facility_point_rule:
     allowed: [representative_point, centroid, intersects]
+  facility_flood_buffer_m:
+    minimum: 50
+    maximum: 1000

@@ -64,6 +64,14 @@ parameters:
     provenance: Shapely representative_point operation.
     rationale: Representative points remain inside their source polygons.
     plausible_range: null
+  facility_flood_buffer_m:
+    value: 250
+    unit: m
+    description: "distance from detected flood water within which a facility counts as flood-affected"
+    kind: project_convention
+    provenance: Flood-impact convention applied to the Sentinel-1-derived flood extent.
+    rationale: "SAR under-detects water at and around buildings (double-bounce) and 30 m pixels mix land and water."
+    plausible_range: [50, 1000]
   raster_area_rule:
     value: pixel_count * 900 m2, pixel centre inside zone
     unit: area rule

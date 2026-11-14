@@ -36,6 +36,15 @@ def _question():
     }
 
 
+def _facility_question():
+    return {
+        "id": "P01",
+        "text": "How many hospitals were flood-affected?",
+        "needs_params": ["facility_point_rule", "facility_flood_buffer_m"],
+        "expected_unit": "count",
+    }
+
+
 def test_system_prompts_differ_only_by_pack_index(tmp_path):
     pack = _pack(tmp_path)
     tools = "Shared GIS tools." + DOMAIN_PARAM_DESCRIPTION
@@ -71,6 +80,25 @@ def test_tasks_differ_only_in_parameter_section_and_a2_has_values(tmp_path):
     assert "water_threshold_vv_db = -18.4 dB" in pieces["inline"][1]
     assert "-18.4" not in tasks["noparam"]
     assert "-18.4" not in tasks["pack"]
+
+
+def test_facility_buffer_value_is_inline_only(tmp_path):
+    pack = _pack(tmp_path)
+    question = _facility_question()
+    tasks = {arm: compose_task(question, arm, pack=pack) for arm in ("noparam", "inline", "pack")}
+    assert "facility_flood_buffer_m = 250 m" in tasks["inline"]
+    assert "250 m" not in tasks["noparam"]
+    assert "250 m" not in tasks["pack"]
+    system = build_system_prompt(
+        "Shared GIS tools." + DOMAIN_PARAM_DESCRIPTION,
+        "pack",
+        question["needs_params"],
+        "",
+        pack=pack,
+        skills_text="",
+    )
+    assert "facility_flood_buffer_m" in system
+    assert "250" not in system
 
 
 def test_prompts_tasks_do_not_leak_metadata_or_threshold_outside_a2(tmp_path):
