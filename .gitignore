@@ -1,0 +1,48 @@
+# Runtime state — never publish
+.env
+projects/
+!projects/.gitkeep
+
+# Secrets and per-install config
+**/.gisclaw/
+*.key
+*.pem
+
+# Logs and run artifacts
+*.log
+app/server.log
+**/runs/
+**/pred_results/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+
+# Local working notes — never publish
+CLAUDE.local.md
+docs/07_lessons/
+
+# Tests
+.pytest_cache/
+
+# Desktop install (created by install.sh / install.ps1)
+.venv/
+gisclaw
+GISclaw.cmd
+GISclaw.app/
+
+# Packaged builds
+build/
+kerala/.env
+results/runs/
+data/kerala/meta/cache/
+logs/

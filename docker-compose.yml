@@ -1,0 +1,56 @@
+# GISclaw — one-command launch.
+#
+#   1. docker compose up -d
+#   2. open http://localhost:8765
+#   3. Settings → API keys… and paste a key
+#
+# No .env is needed: keys go in through the interface. Copy .env.example to
+# .env only if you would rather supply them from the environment.
+#
+# Your work lives on the host, not in the container: the folder below is mounted
+# as /workspace, so every project — its data/, outputs/, runs/, JOURNAL.md,
+# LOG.md — and the API keys you set in the interface (under .gisclaw/, mode 600)
+# are ordinary files on your own disk. Nothing is lost when the container stops.
+#
+# It defaults to ./projects, inside this folder, which is convenient but means a
+# new release unpacked over the top would take your work with it. To keep the
+# two apart, put a line like this in .env and move your existing projects there:
+#
+#     GISCLAW_DATA=/home/you/GISclaw-data
+#
+# Then this source folder is disposable and updating is just a rebuild.
+services:
+  gisclaw:
+    build: .
+    image: gisclaw:latest
+    container_name: gisclaw_app
+    ports:
+      # Published to this machine only. The interface can run any code the
+      # model writes and holds your API keys, so it is not for the whole
+      # network. To reach it from another device, change this to "8765:8765"
+      # knowingly.
+      - "127.0.0.1:8765:8765"
+    env_file:
+      # Genuinely optional. Requires Docker Compose 2.24 or newer; on older
+      # versions this entry still demands the file, so create an empty .env.
+      - path: .env
+        required: false
+    volumes:
+      - ${GISCLAW_DATA:-./projects}:/workspace
+    extra_hosts:
+      # Lets the container reach a model server running on your own machine
+      # (Ollama, LM Studio, vLLM). Inside a container "localhost" is the
+      # container, so an address like http://localhost:11434/v1 is rewritten to
+      # this name. macOS and Windows provide it anyway; Linux only with this line.
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+# ---------------------------------------------------------------------------
+# Developing on GISclaw itself? Add these two mounts for live reload:
+#
+#     - ./app:/app/app          # front-end edits land on a browser refresh
+#     - ./src:/app/src:ro       # agent-core edits need only `docker restart`
+#
+# Do NOT mount a personal skills folder (e.g. ~/.claude/skills) here — those
+# bundles are third-party content. Use GISCLAW_EXTRA_SKILLS for local-only use.
+# ---------------------------------------------------------------------------

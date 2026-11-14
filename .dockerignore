@@ -1,0 +1,21 @@
+# Keep the build context small — only src/ and app/ are COPY'd into the image.
+.git
+__pycache__/
+*.pyc
+*.pyo
+
+# Documentation and sample data ship with the repository, not with the image.
+docs/
+examples/
+
+# Runtime state: the workspace is mounted at run time, never baked in.
+projects/
+**/.gisclaw/
+**/runs/
+**/pred_results/
+*.log
+
+# Local environment
+.env
+.venv/
+venv/
