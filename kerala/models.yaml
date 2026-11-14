@@ -1,0 +1,34 @@
+local-qwen7b:
+  provider: ollama
+  base_url: http://localhost:11434/v1
+  model: gisclaw-qwen7b-16k
+  api_key: ollama
+  temperature: 0
+  seed: 1
+  max_tokens: 1536
+  max_rounds: 12
+  sandbox_timeout: 300
+  context_chars: 24000
+  wall_clock_seconds: 1500
+cloud-flashlite:
+  provider: gemini
+  base_url: https://generativelanguage.googleapis.com/v1beta/openai/
+  model: gemini-2.5-flash-lite
+  api_key_env: GEMINI_API_KEY
+  temperature: 0
+  seed: 1
+  max_tokens: 1536
+  max_rounds: 12
+  sandbox_timeout: 300
+  context_chars: 24000
+  wall_clock_seconds: 1500
+  rpm_limit: 8
+stub:
+  provider: stub
+  model: stub
+  temperature: 0
+  max_tokens: 256
+  max_rounds: 2
+  sandbox_timeout: 5
+  context_chars: 4000
+  wall_clock_seconds: 10
