@@ -71,7 +71,9 @@ EXPECTED_LAYERS = {
 }
 GDAL_OPTIONS = {
     "GDAL_DISABLE_READDIR_ON_OPEN": "EMPTY_DIR",
-    "GDAL_HTTP_MAX_RETRY": "5",
+    "GDAL_HTTP_CONNECTTIMEOUT": "30",
+    "GDAL_HTTP_TIMEOUT": "90",
+    "GDAL_HTTP_MAX_RETRY": "2",
     "GDAL_HTTP_RETRY_DELAY": "2",
     "VSI_CACHE": "FALSE",
 }
@@ -528,7 +530,10 @@ def _prepare_s1(
             with rasterio.open(href) as src:
                 if src.crs is None:
                     raise RuntimeError(f"No CRS on Sentinel-1 asset {item.id}")
-                for win in _windows(width, height):
+                total_windows = math.ceil(width / TILE) * math.ceil(height / TILE)
+                for tile_index, win in enumerate(_windows(width, height), start=1):
+                    if tile_index == 1 or tile_index % 5 == 0 or tile_index == total_windows:
+                        print(f"S1 window {tile_index}/{total_windows}: {item.id}", flush=True)
                     dest = _read_reproject(src, win, transform, Resampling.average, convert_db)
                     r0, c0 = int(win.row_off), int(win.col_off)
                     r1, c1 = r0 + int(win.height), c0 + int(win.width)
