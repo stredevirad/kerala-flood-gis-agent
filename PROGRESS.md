@@ -1,5 +1,5 @@
 # PROGRESS
-## Status: Phase 4 gold-review STOP gate reached; awaiting explicit "gold approved"
+## Status: Phase 4 frozen after Kirito approval; Phase 5 in progress
 ## Checklist
 - [x] Phase 0
   - [x] 0.1 git init + .gitignore + upstream snapshot commit
@@ -33,12 +33,12 @@
   - [x] KeralaAgent and AnswerChecker
   - [x] Prompt construction and task composition
   - [x] Offline tests
-- [ ] Phase 4 — questions, gold, review (STOP gate)
+- [x] Phase 4 — questions, gold, review (STOP gate)
   - [x] Questions and rubric
   - [x] Independent gold and sensitivity results
   - [x] GOLD_REVIEW.md
   - [x] Gold acceptance and review STOP
-  - [ ] Freeze only after "gold approved"
+  - [x] Freeze after "gold approved"
 - [ ] Phase 5 — runner, scorer, demo, smoke tests (STOP gate)
   - [ ] run_one and run_bench
   - [ ] Scorer, tables, taxonomy, figures
@@ -95,10 +95,11 @@ All runs used GISReActAgent on examples\urban-heat-madison, task "Compute the me
 - Kirito superseded the KI-gated threshold selection after reviewing the histogram: choose T=-14.0 dB from T_valley=-13.95 dB using conventional half-up rounding. T_ki=-12.55 dB missed the prior range by 0.45 dB; the water/land trough is selected because the seasonality 1–9 flooded-vegetation tail biases Otsu and breaks KI's Gaussian-class assumption. Keep the [-22,-13] plausible range and all rubric ranges unchanged. Pack provenance is updated as instructed. This is a post-hoc threshold choice to describe in REPORT.md during Phase 6.
 - Kirito revised the Phase 4 facility definition before approval: a facility is flood-affected when its selected representative point/centroid, or its polygon under `intersects`, lies within a 250 m buffer of the detected flood extent. The new project-convention pack key is `facility_flood_buffer_m`, with a 50–1,000 m defensible range and 100/250/500 m sensitivity.
 - The Phase 4 P06 reconciliation keeps the 64,000-pixel visible-layer result. Phase 2's 64,069-pixel reference uses a full DEM before AOI clipping for slope gradients; 121 AOI-edge slope classifications differ (95 Phase-2-only and 26 gold-only), yielding the 69-pixel net difference. This is not caused by the district mask, VV/JRC/DEM nodata, or rounding, and is documented in GOLD_REVIEW.md rather than changing the source layers or threshold.
+- Kirito approved the revised gold review. `kerala/bench/frozen.json` now records the approved hashes for questions, rubric, gold, and pack plus the complete top-level layer listing, sizes, and hashes. The frozen integrity test passed before the Phase 4 freeze commit.
 - No Phase 0 acceptance item was skipped.
 
 ## Needs Kirito
-- Phase 4 STOP gate remains open after the facility-buffer review changes. `kerala/bench/GOLD_REVIEW.md` contains the revised full 23-question gold table, the buffer diagnostic, P06 reconciliation, limitations, exact function-line references, and passing sanity statements. Please read it, line-review `kerala/bench/gold.py`, and hand-check P01, P07, and C01. The acceptance command and 27 Phase 3 tests passed; neither `kerala/bench/frozen.json` nor `tests/test_kerala_frozen.py` exists. Reply exactly `gold approved` to authorize the freeze, or provide corrections; do not start Phase 5 yet.
+- Gold was approved and frozen. Do not edit `questions.yaml`, `rubric.yaml`, `gold.json`, `kerala_pack.yaml`, or the top-level `data/kerala/layers/` files; the frozen test guards their approved hashes and layer listing.
 - Kirito explicitly resumed the work by directing Phase 1 after the Phase 0 STOP gate. The smoke task failures remain documented: Vulkan reached the 12-round limit; CPU stopped on repeated-code detection. The projected local matrix is below 20 hours, so no cut is required by the prompt.
 - The initial pre-rebuild Otsu stop and later KI-gate STOP are superseded by Kirito's post-hoc valley decision recorded under Decisions made. No plausible range or rubric range changed.
 - Pre-rebuild Phase 2 threshold diagnosis (historical; superseded by the approved rerun below):
@@ -156,6 +157,15 @@ C01: 1417.757234 km2
 P06: 64,000 pixels
 P01 250 m buffer: 93 count
 Both independent recomputations matched; all sanity statements passed
+```
+
+Phase 4 freeze command:
+`.\.venv\Scripts\python.exe -m pytest -q tests\test_kerala_frozen.py`
+
+Output:
+```text
+.                                                                        [100%]
+1 passed in 0.08s
 ```
 
 ## Historical Phase 2 stop output (before the post-hoc valley choice)

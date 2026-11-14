@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "frozen_after": "gold approved",
+  "frozen_files": {
+    "kerala/bench/questions.yaml": "9a5b69a7fa8e5471193a09b35324f5111f45b8ad06c4ac33d27f67fb31cafb6b",
+    "kerala/bench/rubric.yaml": "ffd75121f337f7b78822921fabf93da62d95f6e72a19441f4cec1f2ec64ca706",
+    "kerala/bench/gold.json": "103705697f785a075d38dbc2eae42d85136f5e838a74c5de6e33646349de2bf3",
+    "kerala/pack/kerala_pack.yaml": "ca16cff9bee09fd6401d0729b1f34c0bf9ac6aef4ec1923aff84a9f31b4410b8"
+  },
+  "layers": [
+    {"name": "dem_cop30.tif", "bytes": 14610753, "sha256": "6a67e5a908be6ca69bea6a8ee76d923309602cd4a1889172833f3f54b323c304"},
+    {"name": "districts.gpkg", "bytes": 155648, "sha256": "e4d439217f3b3a5150edebbb3580a0b6ca459e40041967af5ad9081f72a5e50d"},
+    {"name": "flood_extent_20180821.gpkg", "bytes": 3129344, "sha256": "f95d00baef86ab4ad7c6b90fbbed6198c38f331ad5e9f3e7848cca127417599a"},
+    {"name": "hospitals.geojson", "bytes": 247465, "sha256": "e3b8ffac2301b2760e7b232071fef504bf45960c547d432d860a4e0d31e73134"},
+    {"name": "jrc_seasonality.tif", "bytes": 317373, "sha256": "9ed0ed21f71d037efd8ca9edc1097444da342ed8555e2ddafff780a29f5b61ea"},
+    {"name": "roads_major.gpkg", "bytes": 3207168, "sha256": "ae1247158c9f3b1d599ef104de0c87b68794fff738e765d1bbd3d21b5d2517b2"},
+    {"name": "s1_vv_20180821_db.tif", "bytes": 15958113, "sha256": "041b79babfea87c1de05085ec2b6acf6a585ef773f2f533cd8f305ae5654f714"},
+    {"name": "schools.geojson", "bytes": 871146, "sha256": "8f7813d033601f7479764141b449089a162c4be460463201e057ec1865342e48"},
+    {"name": "taluks.gpkg", "bytes": 212992, "sha256": "35b200de9919e830da8bc8f2e8f3074cbe392aed9851224653d985faafcd3c38"}
+  ]
+}
