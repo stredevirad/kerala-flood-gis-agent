@@ -129,6 +129,15 @@ def _osm_id(row: Any) -> int | str | None:
         return str(value)
 
 
+def _keep_expected_geometries(frame: gpd.GeoDataFrame, kind: str) -> gpd.GeoDataFrame:
+    expected = {"Point", "Polygon", "MultiPolygon"} if kind == "facility" else {"LineString"}
+    keep = [
+        geom is not None and not geom.is_empty and geom.geom_type in expected
+        for geom in frame.geometry
+    ]
+    return frame.loc[keep].copy()
+
+
 def _load_aoi() -> gpd.GeoDataFrame:
     path = CACHE / "aoi.geojson"
     if path.exists():
@@ -589,6 +598,15 @@ def _prepare_vector_layers(aoi, aoi_projected):
     for filename, tags, kind in feature_specs:
         output_path = LAYERS / filename
         if output_path.exists():
+            if filename in {"schools.geojson", "roads_major.gpkg"}:
+                existing = gpd.read_file(output_path)
+                clean = _keep_expected_geometries(existing, kind)
+                if len(clean) != len(existing):
+                    _atomic_vector_write(
+                        clean,
+                        output_path,
+                        "GeoJSON" if output_path.suffix.lower() == ".geojson" else "GPKG",
+                    )
             continue
         print(f"Phase 2.4: retrieving {filename} from OpenStreetMap", flush=True)
         per_district = filename in {"schools.geojson", "roads_major.gpkg"}
@@ -629,7 +647,8 @@ def _prepare_vector_layers(aoi, aoi_projected):
                 crs="EPSG:4326",
             )
             result = result[["osm_id", "name", "geom_kind", "geometry"]]
-            _atomic_vector_write(result, output_path, "GeoJSON")
+            driver = "GeoJSON"
+            _atomic_vector_write(result, output_path, driver)
         else:
             raw = raw[raw.geometry.geom_type.eq("LineString")].copy()
             result = gpd.GeoDataFrame(
@@ -641,7 +660,13 @@ def _prepare_vector_layers(aoi, aoi_projected):
                 crs="EPSG:4326",
             ).to_crs(TARGET_CRS)
             result = result[["highway", "name", "geometry"]]
-            _atomic_vector_write(result, output_path, "GPKG")
+            driver = "GPKG"
+            _atomic_vector_write(result, output_path, driver)
+        written = gpd.read_file(output_path)
+        clean_written = _keep_expected_geometries(written, kind)
+        if len(clean_written) != len(written):
+            _atomic_vector_write(clean_written, output_path, driver)
+        result = clean_written
         print(f"Wrote {filename}: {len(result):,} features", flush=True)
         retrieved_at = _now()
         retrieval["retrieved_at"] = retrieved_at

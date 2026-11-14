@@ -1,5 +1,5 @@
 # PROGRESS
-## Status: Phase 3 — done (Phase 2 remains stopped at the threshold check)
+## Status: Phase 2 diagnosis recorded and OSM vectors restored; threshold gate remains stopped
 ## Checklist
 - [x] Phase 0
   - [x] 0.1 git init + .gitignore + upstream snapshot commit
@@ -23,7 +23,7 @@
   - [x] Area of interest and district boundaries
   - [x] Taluk boundaries and verification
   - [x] Target grid
-  - [ ] Vector and raster layers
+  - [x] Vector and raster layers
   - [ ] Reference flood and Otsu threshold — stopped: rounded Otsu T is outside the prescribed range
   - [ ] Manifest and cache outputs
   - [ ] Optional NASA cross-check
@@ -108,7 +108,8 @@ All runs used GISReActAgent on examples\urban-heat-madison, task "Compute the me
 - The resumable script was added in commit `1e01f80`; `python -m kerala.prepare_data --stage aoi` completed with `AOI cached` and `Area of interest ready`.
 - Taluk verification passed: Ernakulam (7): Kothamangalam, Muvattupuzha, Kunnathunad, Aluva, Paravur, Kanayannur, Kochi; Alappuzha (6): Kuttanad, Chengannur, Mavelikkara, Karthikappally, Ambalappuzha, Cherthala. All `name` values are ASCII; Kuttanad is present. The OSM result is stored as `data/kerala/layers/taluks.gpkg`.
 - Target grid cached as EPSG:32643 at 30 m: 2,765 × 4,400 = 12,166,000 pixels (<25 million); exterior AOI pixels will be nodata in each agent-visible raster.
-- Raster outputs built from the two instructed descending Sentinel-1 slices, JRC seasonality, and Copernicus DEM. RTC sample percentiles were 0.0288/0.2867/0.8537, confirming linear gamma0; each raster has one band, EPSG:32643, 12,166,000 pixels and 4,819,784 valid inside-AOI pixels. Districts and hospitals (860 features) are also built; schools and roads are incomplete after Overpass capacity errors. OSMnx uses a project-specific User-Agent, and the bbox results are filtered against the exact AOI.
+- Raster outputs built from the two instructed descending Sentinel-1 slices, JRC seasonality, and Copernicus DEM. RTC sample percentiles were 0.0288/0.2867/0.8537, confirming linear gamma0; each raster has one band, EPSG:32643, 12,166,000 pixels and 4,819,784 valid inside-AOI pixels. Districts and hospitals (860 features) are also built. OSMnx uses a project-specific User-Agent, a 600-second request timeout and exponential backoff; the exact AOI/district geometries filter bbox results.
+- On 2026-11-14, per-district OSM queries restored `schools.geojson` (2,289 valid Point/Polygon features) and `roads_major.gpkg` (5,985 valid LineStrings). The raw writes contained 6 and 90 null geometries respectively; those unusable records were removed. The default endpoint returned 502 capacity errors and recovered on retry, so the alternate instance and Geofabrik fallback were not needed. Per-layer endpoint and UTC retrieval times are in `data/kerala/meta/cache/osm_retrieval.json`; `_write_manifest` now copies this metadata into `data_manifest.json` when the threshold gate allows the complete manifest to be written. The complete manifest remains uncreated while T is unresolved.
 - Flood stage stopped before polygonization at the required range check. Therefore no flood extent, flood mask, quicklook, manifest, NASA cross-check or read-only layer attributes were created; the Phase 2 acceptance command was not run because the phase instructions require stopping at this failed threshold check.
 
 ## Phase 3 execution
