@@ -1,5 +1,5 @@
 # PROGRESS
-## Status: Phase 2 — in progress
+## Status: Phase 2 — STOP: waiting for Kirito
 ## Checklist
 - [x] Phase 0
   - [x] 0.1 git init + .gitignore + upstream snapshot commit
@@ -24,7 +24,7 @@
   - [x] Taluk boundaries and verification
   - [x] Target grid
   - [ ] Vector and raster layers
-  - [ ] Reference flood and Otsu threshold
+  - [ ] Reference flood and Otsu threshold — stopped: rounded Otsu T is outside the prescribed range
   - [ ] Manifest and cache outputs
   - [ ] Optional NASA cross-check
   - [ ] Lock layers and acceptance check
@@ -83,7 +83,7 @@ All runs used GISReActAgent on examples\urban-heat-madison, task "Compute the me
 - Projected local matrix at warm timing: 52 × 3.85 minutes = 3.34 hours on CPU; 52 × 3.67 minutes = 3.18 hours on Vulkan. Cold CPU extrapolation would be about 6.41 hours. All are below the 20-hour cut threshold.
 - Timed runs over 25 minutes: 0 of 2 backend modes; naive observed share 0%. This is a two-run timing sample, and both runs ended through agent logic before any wall-clock timeout.
 - Cloud runtime was not measured in Phase 0. The 25-minute per-run ceiling implies at most 21.67 compute hours for 52 serial runs, plus rate-limit backoff; the prompt schedules cloud work across about two days.
-- Kerala threshold, flood areas, taluks, gold table and benchmark smoke scores: not started in Phase 0.
+- Phase 2 Otsu check returned T_raw=-11.6113 dB and T=-11.6 dB, outside the prescribed [-22,-13] range. Flood areas, manifest and layer lock were not produced. Taluk counts and names are recorded below.
 
 ## Decisions made (with reason)
 - Git was already installed (2.51.0.windows.1); no winget installation was needed.
@@ -95,14 +95,25 @@ All runs used GISReActAgent on examples\urban-heat-madison, task "Compute the me
 
 ## Needs Kirito
 - Kirito explicitly resumed the work by directing Phase 1 after the Phase 0 STOP gate. The smoke task failures remain documented: Vulkan reached the 12-round limit; CPU stopped on repeated-code detection. The projected local matrix is below 20 hours, so no cut is required by the prompt.
-- No gold or benchmark design decisions are pending.
+- Phase 2 must stop because the computed rounded Otsu threshold is -11.6 dB, outside the instructed range [-22,-13]. Please review the RTC units/resampling and the prescribed Otsu range before authorizing any change; no threshold, source data or tolerance was altered.
 
 ## Phase 2 execution
 - Area of interest cached from `osmnx.geocode_to_gdf` for Ernakulam and Alappuzha on 2026-11-14. OSMnx's HTTP cache is under the ignored `data/kerala/meta/cache/` directory.
 - The resumable script was added in commit `1e01f80`; `python -m kerala.prepare_data --stage aoi` completed with `AOI cached` and `Area of interest ready`.
 - Taluk verification passed: Ernakulam (7): Kothamangalam, Muvattupuzha, Kunnathunad, Aluva, Paravur, Kanayannur, Kochi; Alappuzha (6): Kuttanad, Chengannur, Mavelikkara, Karthikappally, Ambalappuzha, Cherthala. All `name` values are ASCII; Kuttanad is present. The OSM result is stored as `data/kerala/layers/taluks.gpkg`.
 - Target grid cached as EPSG:32643 at 30 m: 2,765 × 4,400 = 12,166,000 pixels (<25 million); exterior AOI pixels will be nodata in each agent-visible raster.
-- Raster outputs currently built: Sentinel-1 VV (two descending 2018-08-21 slices), JRC seasonality, and Copernicus DEM. RTC sample percentiles were 0.0288/0.2867/0.8537, confirming linear gamma0; raster percentiles, CRSs, nodata, and 4,819,784 inside-AOI pixels were inspected. OSM hospitals also completed (860 features); schools and roads remain in progress after Overpass capacity errors.
+- Raster outputs built from the two instructed descending Sentinel-1 slices, JRC seasonality, and Copernicus DEM. RTC sample percentiles were 0.0288/0.2867/0.8537, confirming linear gamma0; each raster has one band, EPSG:32643, 12,166,000 pixels and 4,819,784 valid inside-AOI pixels. Districts and hospitals (860 features) are also built; schools and roads are incomplete after Overpass capacity errors. OSMnx uses a project-specific User-Agent, and the bbox results are filtered against the exact AOI.
+- Flood stage stopped before polygonization at the required range check. Therefore no flood extent, flood mask, quicklook, manifest, NASA cross-check or read-only layer attributes were created; the Phase 2 acceptance command was not run because the phase instructions require stopping at this failed threshold check.
+
+## Phase 2 stop output
+Command:
+`.\.venv\Scripts\python.exe -m kerala.prepare_data --stage flood`
+
+Output:
+`FLOOD_EXIT=1`
+`Target grid EPSG:32643 2765 x 4400 = 12,166,000 pixels`
+`Otsu T_raw=-11.6113 dB; rounded T=-11.6 dB`
+`NEEDS KIRITO: rounded Otsu T=-11.6 dB is outside [-22, -13]`
 
 ## Phase 0 acceptance outputs (preserved)
 
