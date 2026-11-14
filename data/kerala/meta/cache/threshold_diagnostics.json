@@ -1,0 +1,75 @@
+{
+  "histogram": {
+    "bins": 350,
+    "bin_width_db": 0.1,
+    "min_db": -30.0,
+    "max_db": 5.0
+  },
+  "valid_pixels": 4806014,
+  "T_otsu": -11.649999999999999,
+  "T_ki": -12.549999999999999,
+  "T_valley": -13.95,
+  "T": null,
+  "ki_criterion": 3.4741316249990346,
+  "water_mode_db": -18.849999999999998,
+  "land_mode_db": -5.149999999999999,
+  "gate_passed": false,
+  "otsu_water_pixel_fraction": 0.15257113275158998,
+  "water_pixel_fraction": null,
+  "otsu_alternatives": {
+    "AOI": {
+      "pixels": 4806014,
+      "T_otsu": -11.649999999999999
+    },
+    "excluding_JRC_ge_10": {
+      "pixels": 4533033,
+      "T_otsu": -11.350000381469727
+    },
+    "JRC_ge_10": {
+      "pixels": 272981,
+      "T_otsu": -14.949999809265137
+    },
+    "JRC_1_9": {
+      "pixels": 343566,
+      "T_otsu": -14.149999618530273
+    },
+    "JRC_0": {
+      "pixels": 4189467,
+      "T_otsu": -9.550000190734863
+    },
+    "Ernakulam": {
+      "pixels": 3234661,
+      "T_otsu": -11.149999618530273
+    },
+    "Alappuzha": {
+      "pixels": 1571353,
+      "T_otsu": -11.949999809265137
+    }
+  },
+  "sea_candidate_pixels": 0,
+  "spot_medians": {
+    "Vembanad Lake centre": {
+      "longitude": 76.39,
+      "latitude": 9.6,
+      "radius_m": 500,
+      "pixels": 869,
+      "median_vv_db": -19.504287719726562
+    },
+    "Central Kochi/MG Road": {
+      "longitude": 76.285,
+      "latitude": 9.97,
+      "radius_m": 500,
+      "pixels": 835,
+      "median_vv_db": -3.526521682739258
+    },
+    "Kuttanad paddy near Nedumudi": {
+      "longitude": 76.37,
+      "latitude": 9.43,
+      "radius_m": 500,
+      "pixels": 871,
+      "median_vv_db": -18.72114372253418
+    }
+  },
+  "histogram_path": "data\\kerala\\meta\\cache\\vv_histogram.png",
+  "threshold_plot_path": "data\\kerala\\meta\\cache\\vv_histogram_thresholds.png"
+}
