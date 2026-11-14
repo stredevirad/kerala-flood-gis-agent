@@ -22,7 +22,7 @@
 - [ ] Phase 2 — data preparation
   - [x] Area of interest and district boundaries
   - [x] Taluk boundaries and verification
-  - [ ] Target grid
+  - [x] Target grid
   - [ ] Vector and raster layers
   - [ ] Reference flood and Otsu threshold
   - [ ] Manifest and cache outputs
@@ -101,6 +101,7 @@ All runs used GISReActAgent on examples\urban-heat-madison, task "Compute the me
 - Area of interest cached from `osmnx.geocode_to_gdf` for Ernakulam and Alappuzha on 2026-11-14. OSMnx's HTTP cache is under the ignored `data/kerala/meta/cache/` directory.
 - The resumable script was added in commit `1e01f80`; `python -m kerala.prepare_data --stage aoi` completed with `AOI cached` and `Area of interest ready`.
 - Taluk verification passed: Ernakulam (7): Kothamangalam, Muvattupuzha, Kunnathunad, Aluva, Paravur, Kanayannur, Kochi; Alappuzha (6): Kuttanad, Chengannur, Mavelikkara, Karthikappally, Ambalappuzha, Cherthala. All `name` values are ASCII; Kuttanad is present. The OSM result is stored as `data/kerala/layers/taluks.gpkg`.
+- Target grid cached as EPSG:32643 at 30 m: 2,765 × 4,400 = 12,166,000 pixels (<25 million); exterior AOI pixels will be nodata in each agent-visible raster.
 
 ## Phase 0 acceptance outputs (preserved)
 
