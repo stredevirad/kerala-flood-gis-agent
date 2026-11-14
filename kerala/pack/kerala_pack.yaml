@@ -1,0 +1,74 @@
+schema_version: 1
+parameters:
+  project_crs:
+    value: EPSG:32643
+    unit: CRS
+    description: Projected coordinate system used for area and distance measurements.
+    kind: standard_practice
+    provenance: UTM zone 43N is appropriate for Kerala longitudes.
+    rationale: A projected metre-based coordinate system makes area and distance operations meaningful.
+    plausible_range: null
+  flood_date:
+    value: '2018-08-21'
+    unit: date
+    description: Acquisition date of the Sentinel-1 flood-analysis scene.
+    kind: calibrated
+    provenance: Descending Sentinel-1A RTC observations; Vishnu et al. 2019 mapped the event on this date.
+    rationale: This is the instructed date, when some flood water had already receded.
+    plausible_range: null
+  water_threshold_vv_db:
+    value: null
+    unit: dB
+    description: VV backscatter cutoff used to classify water pixels.
+    kind: calibrated
+    provenance: Resolved from T in data/kerala/meta/data_manifest.json after Phase 2 acceptance.
+    rationale: Otsu threshold computed from valid VV dB pixels inside the area of interest.
+    plausible_range: [-22, -13]
+  permanent_water_rule:
+    value: jrc_seasonality >= 10
+    unit: rule
+    description: Seasonality rule used to exclude permanent water.
+    kind: standard_practice
+    provenance: UN-SPIDER recommended practice using JRC Global Surface Water seasonality.
+    rationale: Long-term seasonal water occurrence is excluded from the flood mask.
+    plausible_range: null
+  max_flood_slope_deg:
+    value: 5
+    unit: degree
+    description: Maximum slope retained in the flood mask.
+    kind: standard_practice
+    provenance: UN-SPIDER recommended practice.
+    rationale: Steeper terrain is excluded from the flood mask.
+    plausible_range: null
+  low_lying_max_elevation_m:
+    value: 10
+    unit: m
+    description: Elevation cutoff used to define low-lying land.
+    kind: project_convention
+    provenance: Project convention applied to Copernicus DEM GLO-30 heights.
+    rationale: A fixed elevation cutoff makes the low-lying analysis reproducible.
+    plausible_range: null
+  relief_camp_hospital_access_m:
+    value: 3000
+    unit: m
+    description: Straight-line distance used for hospital access.
+    kind: project_convention
+    provenance: Project convention; distance sensitivity is reported separately.
+    rationale: A single radius provides a reproducible access measure.
+    plausible_range: null
+  facility_point_rule:
+    value: representative_point
+    unit: geometry rule
+    description: Point reduction rule for polygon facilities.
+    kind: project_convention
+    provenance: Shapely representative_point operation.
+    rationale: Representative points remain inside their source polygons.
+    plausible_range: null
+  raster_area_rule:
+    value: pixel_count * 900 m2, pixel centre inside zone
+    unit: area rule
+    description: Pixel-centre rule for raster area counts.
+    kind: project_convention
+    provenance: 30 m target grid in EPSG:32643.
+    rationale: Counting pixel centres avoids counting partial edge pixels.
+    plausible_range: null

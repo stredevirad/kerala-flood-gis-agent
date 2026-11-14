@@ -1,5 +1,5 @@
 # PROGRESS
-## Status: Phase 2 — STOP: waiting for Kirito
+## Status: Phase 3 — in progress (Phase 2 remains stopped at the threshold check)
 ## Checklist
 - [x] Phase 0
   - [x] 0.1 git init + .gitignore + upstream snapshot commit
@@ -29,7 +29,7 @@
   - [ ] Optional NASA cross-check
   - [ ] Lock layers and acceptance check
 - [ ] Phase 3 — pack, AnswerChecker, agent, prompt
-  - [ ] Pack schema and tool
+  - [x] Pack schema and tool
   - [ ] KeralaAgent and AnswerChecker
   - [ ] Prompt construction and task composition
   - [ ] Offline tests
@@ -104,6 +104,10 @@ All runs used GISReActAgent on examples\urban-heat-madison, task "Compute the me
 - Target grid cached as EPSG:32643 at 30 m: 2,765 × 4,400 = 12,166,000 pixels (<25 million); exterior AOI pixels will be nodata in each agent-visible raster.
 - Raster outputs built from the two instructed descending Sentinel-1 slices, JRC seasonality, and Copernicus DEM. RTC sample percentiles were 0.0288/0.2867/0.8537, confirming linear gamma0; each raster has one band, EPSG:32643, 12,166,000 pixels and 4,819,784 valid inside-AOI pixels. Districts and hospitals (860 features) are also built; schools and roads are incomplete after Overpass capacity errors. OSMnx uses a project-specific User-Agent, and the bbox results are filtered against the exact AOI.
 - Flood stage stopped before polygonization at the required range check. Therefore no flood extent, flood mask, quicklook, manifest, NASA cross-check or read-only layer attributes were created; the Phase 2 acceptance command was not run because the phase instructions require stopping at this failed threshold check.
+
+## Phase 3 execution
+- Kirito directed continuation to Phase 3 while the Phase 2 threshold review remains pending. The Phase 3 pack keeps `water_threshold_vv_db` unresolved in YAML and resolves it only from an accepted manifest at load time; it rejects values outside the prescribed range. No threshold value was invented or substituted.
+- Schema-v1 pack YAML and `kerala.pack.pack` now provide schema checking, manifest binding, value-free parameter indexing, and per-run `domain_param` call logging.
 
 ## Phase 2 stop output
 Command:
