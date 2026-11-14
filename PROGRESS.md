@@ -14,7 +14,7 @@
 - [ ] Phase 1 — F1–F5 and regression tests
   - [x] F1 polygon count left-join regression
   - [x] F2 terrain operations reject geographic CRS
-  - [ ] F3 Windows UTF-8 file handling
+  - [x] F3 Windows UTF-8 file handling
   - [ ] F4 conversation trim respects context budget
   - [ ] F5 OpenAI retries, zero temperature and optional seed
   - [ ] Run targeted fixes tests

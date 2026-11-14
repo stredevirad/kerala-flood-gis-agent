@@ -783,7 +783,7 @@ class GISReActAgent:
         
         # Everything the agent ran, as one script.
         full_code = sandbox.get_full_code()
-        with open(os.path.join(work_dir, "code.py"), "w") as f:
+        with open(os.path.join(work_dir, "code.py"), "w", encoding="utf-8") as f:
             f.write(full_code)
 
         # An emergency save is not the agent finishing the job.
@@ -840,7 +840,7 @@ class GISReActAgent:
             
             elif ext == 'csv':
                 try:
-                    with open(fpath) as f:
+                    with open(fpath, encoding="utf-8", errors="replace") as f:
                         lines = sum(1 for _ in f)
                     if lines <= 1:
                         issues.append(f"- {fn}: Only {lines} line(s) (may be header only), please ensure data is present.")

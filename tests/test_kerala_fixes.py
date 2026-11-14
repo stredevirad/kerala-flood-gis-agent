@@ -3,6 +3,10 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """Regression tests for the upstream fixes required by KeralaFloodBench."""
 
+import builtins
+import json
+from unittest.mock import patch
+
 import geopandas as gpd
 import numpy as np
 import pytest
@@ -11,6 +15,7 @@ from rasterio.transform import Affine
 from shapely.geometry import Point, Polygon
 
 from src.agent.geo_ops import _b_count_in_polygon, _terrain
+from src.agent.react_agent import GISReActAgent
 
 
 def test_count_in_polygon_does_not_count_empty_left_join_rows(tmp_path, monkeypatch):
@@ -75,3 +80,48 @@ def test_slope_of_projected_one_percent_ramp_is_about_057_degrees(
     exec(code, namespace)
 
     assert np.allclose(namespace["terrain"], 0.5729, atol=0.001)
+
+
+def test_code_py_is_written_as_utf8_with_degree_and_malayalam(tmp_path, monkeypatch):
+    import src.agent.react_agent as react_agent
+
+    monkeypatch.setattr(react_agent, "_link_dataset", lambda *_args: None)
+    code = (
+        "open('pred_results/notes.txt', 'w', encoding='utf-8')"
+        ".write('° മലയാളം')"
+    )
+    replies = iter([
+        "Thought: save text\nAction: execute\nArgs: "
+        + json.dumps({"code": code}, ensure_ascii=False),
+        'Thought: done\nAction: finish\nArgs: {"summary": "Saved."}',
+    ])
+
+    class Engine:
+        def generate(self, **_kwargs):
+            return {"text": next(replies)}
+
+    result = GISReActAgent(Engine(), verbose=False).run(
+        "Write a UTF-8 note.",
+        data_dir=str(tmp_path),
+        work_dir=str(tmp_path / "work"),
+    )
+
+    assert result.success
+    code_bytes = (tmp_path / "work" / "code.py").read_bytes()
+    assert "° മലയാളം" in code_bytes.decode("utf-8")
+
+
+def test_csv_output_guard_uses_utf8_with_replacement(tmp_path):
+    pred_dir = tmp_path / "pred_results"
+    pred_dir.mkdir()
+    csv_path = pred_dir / "rows.csv"
+    csv_path.write_bytes(b"name\nvalue-\xff\n")
+    agent = GISReActAgent(None, verbose=False)
+
+    with patch("builtins.open", wraps=builtins.open) as open_mock:
+        issues = agent._validate_outputs(str(tmp_path))
+
+    assert issues == ""
+    open_mock.assert_called_once_with(
+        str(csv_path), encoding="utf-8", errors="replace"
+    )
