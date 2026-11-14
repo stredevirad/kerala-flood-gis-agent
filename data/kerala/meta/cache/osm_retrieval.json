@@ -1,8 +1,8 @@
 {
-  "retrieved_at": "2026-11-14T10:38:35.789810+00:00",
+  "retrieved_at": "2026-11-14T15:28:16.575509+00:00",
   "layers": {
     "schools.geojson": {
-      "retrieved_at": "2026-11-14T10:26:19.019533+00:00",
+      "retrieved_at": "2026-11-14T15:28:14.552868+00:00",
       "source": "OpenStreetMap Overpass API",
       "endpoints": [
         "https://overpass-api.de/api/interpreter"
@@ -10,10 +10,28 @@
       "district_queries": [
         "Ernakulam",
         "Alappuzha"
-      ]
+      ],
+      "fetched_rows": 4136,
+      "null_or_empty_geometry_dropped_by_element": {},
+      "geometry_counts_before_save_by_element": {
+        "way": {
+          "Polygon": 1864
+        },
+        "node": {
+          "Point": 426
+        },
+        "relation": {
+          "Polygon": 5
+        }
+      },
+      "geometry_counts_after_save": {
+        "Polygon": 1869,
+        "Point": 426
+      },
+      "features_after_save": 2295
     },
     "roads_major.gpkg": {
-      "retrieved_at": "2026-11-14T10:38:35.789810+00:00",
+      "retrieved_at": "2026-11-14T15:28:16.575509+00:00",
       "source": "OpenStreetMap Overpass API",
       "endpoints": [
         "https://overpass-api.de/api/interpreter"
@@ -21,7 +39,41 @@
       "district_queries": [
         "Ernakulam",
         "Alappuzha"
-      ]
+      ],
+      "fetched_rows": 10234,
+      "null_or_empty_geometry_dropped_by_element": {},
+      "geometry_counts_before_save_by_element": {
+        "way": {
+          "LineString": 6075
+        }
+      },
+      "geometry_counts_after_save": {
+        "LineString": 6075
+      },
+      "features_after_save": 6075
+    },
+    "hospitals.geojson": {
+      "retrieved_at": "2026-11-14T15:28:13.771405+00:00",
+      "source": "OpenStreetMap Overpass API",
+      "endpoints": [
+        "https://overpass-api.de/api/interpreter"
+      ],
+      "district_queries": [],
+      "fetched_rows": 1660,
+      "null_or_empty_geometry_dropped_by_element": {},
+      "geometry_counts_before_save_by_element": {
+        "node": {
+          "Point": 510
+        },
+        "way": {
+          "Polygon": 350
+        }
+      },
+      "geometry_counts_after_save": {
+        "Point": 510,
+        "Polygon": 350
+      },
+      "features_after_save": 860
     }
   }
 }
