@@ -1,0 +1,37 @@
+schema_version: 1
+tolerances:
+  count:
+    kind: exact
+  km2:
+    kind: relative
+    value: 0.03
+  km:
+    kind: relative
+    value: 0.03
+  percent:
+    kind: absolute_points
+    value: 1.0
+  m:
+    kind: absolute
+    value: 0.5
+  name:
+    kind: normalized_exact
+    normalization: case-insensitive; strip taluk, whitespace and punctuation
+defensible_ranges:
+  water_threshold_vv_db:
+    minimum: -22
+    maximum: -13
+  permanent_water_rule:
+    minimum_months: 6
+    maximum_months: 12
+  max_flood_slope_deg:
+    minimum: 2
+    maximum: 10
+  relief_camp_hospital_access_m:
+    minimum: 1000
+    maximum: 10000
+  low_lying_max_elevation_m:
+    minimum: 3
+    maximum: 20
+  facility_point_rule:
+    allowed: [representative_point, centroid, intersects]

@@ -1,0 +1,163 @@
+schema_version: 1
+questions:
+  - id: P01
+    split: test
+    type: parameter
+    needs_params: [facility_point_rule]
+    expected_status: ok
+    expected_unit: count
+    text: How many mapped hospitals in Alappuzha district were inside the flood extent on 21 August 2018?
+  - id: P02
+    split: test
+    type: parameter
+    needs_params: [facility_point_rule]
+    expected_status: ok
+    expected_unit: count
+    text: How many mapped schools in Ernakulam district were inside the flood extent on 21 August 2018?
+  - id: P03
+    split: test
+    type: parameter
+    needs_params: [relief_camp_hospital_access_m, facility_point_rule]
+    expected_status: ok
+    expected_unit: count
+    text: How many mapped schools in Alappuzha district (candidate relief camps) had no hospital within the relief-camp hospital access distance?
+  - id: P04
+    split: test
+    type: parameter
+    needs_params: [relief_camp_hospital_access_m, facility_point_rule]
+    expected_status: ok
+    expected_unit: name
+    text: Which taluk in Ernakulam or Alappuzha has the most mapped schools with no hospital within the relief-camp hospital access distance?
+  - id: P05
+    split: test
+    type: parameter
+    needs_params: [water_threshold_vv_db, raster_area_rule]
+    expected_status: ok
+    expected_unit: km2
+    text: Using only the Sentinel-1 VV image of 21 August 2018, what area of Alappuzha district (km²) appears as open water?
+  - id: P06
+    split: test
+    type: parameter
+    needs_params: [water_threshold_vv_db, permanent_water_rule, max_flood_slope_deg, raster_area_rule]
+    expected_status: ok
+    expected_unit: km2
+    text: Using the Sentinel-1 VV image of 21 August 2018, excluding permanent water bodies and steep slopes, what area of Ernakulam district (km²) was flooded?
+  - id: P07
+    split: test
+    type: parameter
+    needs_params: [water_threshold_vv_db, permanent_water_rule, max_flood_slope_deg, raster_area_rule]
+    expected_status: ok
+    expected_unit: percent
+    text: Using the Sentinel-1 VV image of 21 August 2018, excluding permanent water bodies and steep slopes, what percentage of Kuttanad taluk was flooded?
+  - id: P08
+    split: test
+    type: parameter
+    needs_params: [low_lying_max_elevation_m, raster_area_rule]
+    expected_status: ok
+    expected_unit: km2
+    text: How much low-lying land (km²) in Alappuzha district lay inside the flood extent on 21 August 2018?
+  - id: P09
+    split: test
+    type: parameter
+    needs_params: [low_lying_max_elevation_m, facility_point_rule]
+    expected_status: ok
+    expected_unit: count
+    text: How many mapped hospitals in the two districts stand on low-lying land?
+  - id: P10
+    split: test
+    type: parameter
+    needs_params: [low_lying_max_elevation_m, raster_area_rule]
+    expected_status: ok
+    expected_unit: name
+    text: Among taluks with at least 10 km² of low-lying land, which had the largest share of its low-lying land inside the flood extent on 21 August 2018?
+  - id: P11
+    split: test
+    type: parameter
+    needs_params: [low_lying_max_elevation_m, facility_point_rule]
+    expected_status: ok
+    expected_unit: count
+    text: How many mapped hospitals in Ernakulam district were both inside the flood extent on 21 August 2018 and on low-lying land?
+  - id: P12
+    split: test
+    type: parameter
+    needs_params: [relief_camp_hospital_access_m, facility_point_rule]
+    expected_status: ok
+    expected_unit: count
+    text: How many mapped schools in Ernakulam district that were inside the flood extent on 21 August 2018 had a hospital within the relief-camp hospital access distance?
+  - id: C01
+    split: test
+    type: control
+    needs_params: []
+    expected_status: ok
+    expected_unit: km2
+    text: What is the total area of Alappuzha district in km², computed in EPSG:32643?
+  - id: C02
+    split: test
+    type: control
+    needs_params: []
+    expected_status: ok
+    expected_unit: km
+    text: What is the total length in km of the parts of roads in `roads_major.gpkg` that lie inside Ernakulam district (clip the lines to the district)?
+  - id: C03
+    split: test
+    type: control
+    needs_params: []
+    expected_status: ok
+    expected_unit: name
+    text: Using the polygons in `flood_extent_20180821.gpkg`, which taluk has the largest flooded area in km²?
+  - id: C04
+    split: test
+    type: control
+    needs_params: []
+    expected_status: ok
+    expected_unit: count
+    text: How many features in `hospitals.geojson` have their representative point inside Ernakulam district?
+  - id: C05
+    split: test
+    type: control
+    needs_params: []
+    expected_status: ok
+    expected_unit: m
+    text: What is the mean elevation (m) of Kuttanad taluk in `dem_cop30.tif`, counting a pixel when its centre lies inside the taluk?
+  - id: C06
+    split: test
+    type: control
+    needs_params: []
+    expected_status: ok
+    expected_unit: km2
+    text: Using the polygons in `flood_extent_20180821.gpkg`, what is the flooded area of Ernakulam district in km²?
+  - id: C07
+    split: test
+    type: control
+    needs_params: []
+    expected_status: cannot_answer
+    expected_unit: null
+    text: How many hospitals in Alappuzha district were damaged by the flood?
+  - id: C08
+    split: test
+    type: control
+    needs_params: []
+    expected_status: cannot_answer
+    expected_unit: null
+    text: How many people were evacuated to relief camps in Ernakulam district?
+  - id: D01
+    split: dev
+    type: dev
+    needs_params: []
+    expected_status: ok
+    expected_unit: count
+    text: How many features are in `hospitals.geojson`?
+  - id: D02
+    split: dev
+    type: dev
+    needs_params: []
+    expected_status: ok
+    expected_unit: km2
+    text: What is the area of Ernakulam district in km²?
+  - id: D03
+    split: dev
+    type: dev
+    needs_params: []
+    expected_status: ok
+    expected_unit: km2
+    text: Using `flood_extent_20180821.gpkg`, what is the flooded area of Alappuzha district in km²?
