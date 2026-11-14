@@ -30,7 +30,7 @@
   - [ ] Lock layers and acceptance check
 - [ ] Phase 3 — pack, AnswerChecker, agent, prompt
   - [x] Pack schema and tool
-  - [ ] KeralaAgent and AnswerChecker
+  - [x] KeralaAgent and AnswerChecker
   - [ ] Prompt construction and task composition
   - [ ] Offline tests
 - [ ] Phase 4 — questions, gold, review (STOP gate)
@@ -108,6 +108,7 @@ All runs used GISReActAgent on examples\urban-heat-madison, task "Compute the me
 ## Phase 3 execution
 - Kirito directed continuation to Phase 3 while the Phase 2 threshold review remains pending. The Phase 3 pack keeps `water_threshold_vv_db` unresolved in YAML and resolves it only from an accepted manifest at load time; it rejects values outside the prescribed range. No threshold value was invented or substituted.
 - Schema-v1 pack YAML and `kerala.pack.pack` now provide schema checking, manifest binding, value-free parameter indexing, and per-run `domain_param` call logging.
+- `AnswerChecker` and `KeralaAgent` now enforce answer shape/unit/range rules, preserve numbered answer attempts, call GISclaw's built-in output guard, and append checker records without accessing pack values.
 
 ## Phase 2 stop output
 Command:
