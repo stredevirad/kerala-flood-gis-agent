@@ -125,3 +125,21 @@ def test_csv_output_guard_uses_utf8_with_replacement(tmp_path):
     open_mock.assert_called_once_with(
         str(csv_path), encoding="utf-8", errors="replace"
     )
+
+
+def test_conversation_trimming_obeys_context_budget_without_cutting_header():
+    agent = GISReActAgent(None, context_chars=4000, verbose=False)
+    header = "Task: preserve this complete task header."
+    history = [
+        ("assistant" if index % 2 == 0 else "user",
+         f"entry-{index} " + ("x" * 1400) + f" tail-{index}")
+        for index in range(20)
+    ]
+    history[-1] = ("user", "last exchange " + ("y" * 1400) + " LAST-ENTRY-TAIL")
+
+    formatted = agent._format_conversation(header, history)
+
+    assert formatted.startswith(header)
+    assert "LAST-ENTRY-TAIL" in formatted
+    assert "…(trimmed)…" in formatted
+    assert len(formatted) <= 4000 + len(header) + 300

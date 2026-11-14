@@ -898,12 +898,47 @@ class GISReActAgent:
         # Keep the task and the most recent rounds when it gets long.
         full_text = "\n".join(parts)
         if len(full_text) > self.context_chars:
-            # Drop whole exchanges from the front until it fits, keeping the
-            # task and at least the last few rounds.
             header = parts[0]
             tail = parts[1:]
-            while len(tail) > 14 and len(header) + sum(len(x) + 1 for x in tail) > self.context_chars:
-                tail = tail[2:]
-            full_text = header + "\n\n... (earlier steps omitted) ...\n\n" + "\n".join(tail)
+
+            def render(entries):
+                if not entries:
+                    return header
+                return (
+                    header
+                    + "\n\n... (earlier steps omitted) ...\n\n"
+                    + "\n".join(entries)
+                )
+
+            # First shorten older entries while preserving the newest four.
+            shortened = []
+            for index, entry in enumerate(tail):
+                if index < len(tail) - 4 and len(entry) > 600:
+                    shortened.append(entry[:300] + "…(trimmed)…" + entry[-300:])
+                else:
+                    shortened.append(entry)
+            tail = shortened
+            full_text = render(tail)
+
+            # Then discard older entries, retaining the task header and newest four.
+            if len(full_text) > self.context_chars:
+                tail = tail[-4:]
+                full_text = render(tail)
+
+            # Finally bound the retained entries without cutting the task header.
+            if len(full_text) > self.context_chars:
+                limit = self.context_chars // 5
+                marker = "…(trimmed)…"
+
+                def cap_entry(entry):
+                    if len(entry) <= limit:
+                        return entry
+                    available = limit - len(marker)
+                    head_len = available // 2
+                    tail_len = available - head_len
+                    return entry[:head_len] + marker + (entry[-tail_len:] if tail_len else "")
+
+                tail = [cap_entry(entry) for entry in tail]
+                full_text = render(tail)
         
         return full_text
