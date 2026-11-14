@@ -99,24 +99,31 @@ def main():
 
     agent = GISReActAgent(engine, timeout=300, max_rounds=12, verbose=True,
                           context_chars=24000)
-    last = {"calls": 0, "prompt": 0, "completion": 0}
     events_path = out / "calls.jsonl"
     with events_path.open("w", encoding="utf-8") as events:
-        def on_step(event):
+        original_generate = engine.generate
+        call_number = 0
+
+        def measured_generate(*args, **kwargs):
+            nonlocal call_number
+            before = engine.get_stats()
+            start_call = time.perf_counter()
+            response = original_generate(*args, **kwargs)
             stats = engine.get_stats()
-            calls = stats["total_calls"]
+            call_number += 1
             record = {
-                "round": event.get("round"),
-                "action": event.get("action"),
-                "wall_seconds": round(event.get("gen_time_ms", 0) / 1000, 3),
-                "prompt_tokens": stats["prompt_tokens"] - last["prompt"],
-                "completion_tokens": stats["total_output_tokens"] - last["completion"],
-                "llm_call": calls - last["calls"],
+                "call": call_number,
+                "wall_seconds": round(time.perf_counter() - start_call, 3),
+                "prompt_tokens": stats["prompt_tokens"] - before["prompt_tokens"],
+                "completion_tokens": (
+                    stats["total_output_tokens"] - before["total_output_tokens"]
+                ),
             }
             events.write(json.dumps(record, ensure_ascii=False) + "\n")
             events.flush()
-            last.update(calls=calls, prompt=stats["prompt_tokens"],
-                        completion=stats["total_output_tokens"])
+            return response
+
+        engine.generate = measured_generate
 
         peak_ram = [system_memory_used_gb()]
         stop_sampler = threading.Event()
@@ -133,7 +140,6 @@ def main():
                 "Compute the mean temperature per block and save a choropleth PNG",
                 data_dir="examples/urban-heat-madison",
                 work_dir=str(out / "work"),
-                on_step=on_step,
             )
         finally:
             stop_sampler.set()
