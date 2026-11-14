@@ -46,6 +46,10 @@ PIXEL_SIZE = 30
 MAX_PIXELS = 25_000_000
 TILE = 512
 DISTRICTS = ("Ernakulam", "Alappuzha")
+OVERPASS_ENDPOINTS = (
+    "https://overpass-api.de/api",
+    "https://overpass.private.coffee/api",
+)
 EXPECTED_S1_PREFIXES = (
     "S1A_IW_GRDH_1SDV_20180821T004044_",
     "S1A_IW_GRDH_1SDV_20180821T004109_",
@@ -184,23 +188,52 @@ def _aoi_union(aoi: gpd.GeoDataFrame):
     return unary_union(aoi.geometry.tolist())
 
 
-def _feature_frame(polygon, tags: dict[str, Any]) -> gpd.GeoDataFrame:
+def _feature_frame(
+    polygon,
+    tags: dict[str, Any],
+    *,
+    return_source: bool = False,
+) -> gpd.GeoDataFrame | tuple[gpd.GeoDataFrame, str]:
     # A bounding-box query is much cheaper for Overpass than serializing the
-    # districts' detailed coastlines into a poly query. Every caller filters
-    # the returned geometries against the exact AOI or representative-point rule.
+    # districts' detailed coastlines into a poly query. Callers filter returned
+    # geometries against the exact district or AOI geometry.
     bounds = polygon.bounds
     bbox = (bounds[0], bounds[1], bounds[2], bounds[3])
-    for attempt in range(4):
-        try:
-            return ox.features_from_bbox(bbox=bbox, tags=tags).reset_index()
-        except Exception as exc:
-            message = str(exc).casefold()
-            transient = any(code in message for code in ("429", "502", "503", "504", "timeout", "temporarily"))
-            if not transient or attempt == 3:
-                raise
-            delay = 15 * (2**attempt)
-            print(f"Transient Overpass error; retrying in {delay}s ({attempt + 1}/3): {exc}", flush=True)
-            time.sleep(delay)
+    last_error: Exception | None = None
+    for endpoint_index, endpoint in enumerate(OVERPASS_ENDPOINTS):
+        ox.settings.overpass_url = endpoint
+        for attempt in range(4):
+            try:
+                frame = ox.features_from_bbox(bbox=bbox, tags=tags).reset_index()
+                return (frame, endpoint + "/interpreter") if return_source else frame
+            except Exception as exc:
+                last_error = exc
+                message = str(exc).casefold()
+                transient = any(
+                    token in message
+                    for token in (
+                        "429", "502", "503", "504", "timeout", "timed out",
+                        "temporarily", "connection reset", "connection aborted",
+                        "remote end closed", "server error", "not responding",
+                    )
+                )
+                if transient and attempt < 3:
+                    delay = 15 * (2**attempt)
+                    print(
+                        f"Overpass error at {endpoint}; retrying in {delay}s "
+                        f"({attempt + 1}/3): {exc}",
+                        flush=True,
+                    )
+                    time.sleep(delay)
+                    continue
+                break
+        if endpoint_index + 1 < len(OVERPASS_ENDPOINTS):
+            print(
+                f"Overpass endpoint {endpoint} failed; switching to {OVERPASS_ENDPOINTS[endpoint_index + 1]}",
+                flush=True,
+            )
+    assert last_error is not None
+    raise RuntimeError("All configured Overpass endpoints failed") from last_error
 
 
 def _prepare_taluks(aoi: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
@@ -541,9 +574,13 @@ def _prepare_vector_layers(aoi, aoi_projected):
 
     aoi_ll = aoi.to_crs("EPSG:4326")
     union_ll = unary_union(aoi_ll.geometry.tolist())
-    retrieval = CACHE / "osm_retrieval.json"
-    if not retrieval.exists():
-        _json_write(retrieval, {"retrieved_at": _now()})
+    retrieval_path = CACHE / "osm_retrieval.json"
+    retrieval = (
+        json.loads(retrieval_path.read_text(encoding="utf-8"))
+        if retrieval_path.exists()
+        else {"retrieved_at": _now()}
+    )
+    retrieval.setdefault("layers", {})
     feature_specs = [
         ("hospitals.geojson", {"amenity": "hospital", "healthcare": "hospital"}, "facility"),
         ("schools.geojson", {"amenity": "school"}, "facility"),
@@ -554,7 +591,30 @@ def _prepare_vector_layers(aoi, aoi_projected):
         if output_path.exists():
             continue
         print(f"Phase 2.4: retrieving {filename} from OpenStreetMap", flush=True)
-        raw = _feature_frame(union_ll, tags)
+        per_district = filename in {"schools.geojson", "roads_major.gpkg"}
+        query_areas = (
+            [(str(row["name"]), row.geometry) for _, row in aoi_ll.iterrows()]
+            if per_district
+            else [("AOI", union_ll)]
+        )
+        frames = []
+        endpoints = []
+        for district_name, query_area in query_areas:
+            if per_district:
+                print(f"Querying {filename} for {district_name}", flush=True)
+            frame, endpoint = _feature_frame(query_area, tags, return_source=True)
+            frame = frame[frame.geometry.notna() & ~frame.geometry.is_empty].copy()
+            frame = frame[frame.geometry.intersects(query_area)]
+            frames.append(frame)
+            endpoints.append(endpoint)
+        raw = gpd.GeoDataFrame(
+            pd.concat(frames, ignore_index=True),
+            geometry="geometry",
+            crs="EPSG:4326",
+        )
+        dedupe_columns = [column for column in ("element", "id", "osmid") if column in raw.columns]
+        if dedupe_columns:
+            raw = raw.drop_duplicates(subset=dedupe_columns).copy()
         raw = raw[raw.geometry.notna() & ~raw.geometry.is_empty].copy()
         raw = raw[raw.geometry.intersects(union_ll)]
         if kind == "facility":
@@ -583,6 +643,15 @@ def _prepare_vector_layers(aoi, aoi_projected):
             result = result[["highway", "name", "geometry"]]
             _atomic_vector_write(result, output_path, "GPKG")
         print(f"Wrote {filename}: {len(result):,} features", flush=True)
+        retrieved_at = _now()
+        retrieval["retrieved_at"] = retrieved_at
+        retrieval["layers"][filename] = {
+            "retrieved_at": retrieved_at,
+            "source": "OpenStreetMap Overpass API",
+            "endpoints": list(dict.fromkeys(endpoints)),
+            "district_queries": [name for name, _ in query_areas if name != "AOI"],
+        }
+        _json_write(retrieval_path, retrieval)
 
 
 def _otsu_threshold(values: np.ndarray) -> float:
@@ -713,6 +782,7 @@ def _write_manifest(aoi, taluks, stac_items, rtc_info, flood_stats):
             feature_counts[name] = {"features": int(len(gpd.read_file(path)))}
     with rasterio.open(LAYERS / "s1_vv_20180821_db.tif") as grid_source:
         grid_width, grid_height = grid_source.width, grid_source.height
+    osm_retrieval = json.loads((CACHE / "osm_retrieval.json").read_text(encoding="utf-8"))
     manifest = {
         "created_at": _now(),
         "target_grid": {
@@ -728,7 +798,8 @@ def _write_manifest(aoi, taluks, stac_items, rtc_info, flood_stats):
         "pixels_and_km2_by_district": flood_stats["pixels_by_district"],
         "pixels_and_km2_total": flood_stats["total_km2"],
         "feature_counts": feature_counts,
-        "osm_retrieval_time": json.loads((CACHE / "osm_retrieval.json").read_text(encoding="utf-8"))["retrieved_at"],
+        "osm_retrieval_time": osm_retrieval["retrieved_at"],
+        "osm_retrieval": osm_retrieval,
         "libraries": {
             "geopandas": gpd.__version__,
             "shapely": __import__("shapely").__version__,
@@ -798,7 +869,9 @@ def _check() -> None:
 
 def prepare(stage: str = "full") -> None:
     ox.settings.cache_folder = str(CACHE / "osmnx_http")
-    ox.settings.http_user_agent = "KeralaFloodBench/0.1 (OSM vector preparation)"
+    ox.settings.http_user_agent = "KeralaFloodBench/0.1 (GISclaw research benchmark; OSM data preparation)"
+    ox.settings.requests_timeout = 600
+    ox.settings.overpass_url = OVERPASS_ENDPOINTS[0]
     for folder in (LAYERS, META, CACHE):
         folder.mkdir(parents=True, exist_ok=True)
     aoi = _load_aoi()
