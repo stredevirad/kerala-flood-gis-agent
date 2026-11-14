@@ -5,16 +5,20 @@
 
 import builtins
 import json
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import geopandas as gpd
+import httpx
 import numpy as np
 import pytest
+from openai import RateLimitError
 from rasterio.crs import CRS
 from rasterio.transform import Affine
 from shapely.geometry import Point, Polygon
 
 from src.agent.geo_ops import _b_count_in_polygon, _terrain
+from src.agent.llm_engine import OpenAIEngine
 from src.agent.react_agent import GISReActAgent
 
 
@@ -143,3 +147,94 @@ def test_conversation_trimming_obeys_context_budget_without_cutting_header():
     assert "LAST-ENTRY-TAIL" in formatted
     assert "…(trimmed)…" in formatted
     assert len(formatted) <= 4000 + len(header) + 300
+
+
+def test_openai_engine_retries_rate_limits_and_honors_retry_after(monkeypatch):
+    response = httpx.Response(
+        429,
+        headers={"Retry-After": "0.25"},
+        request=httpx.Request("POST", "https://api.example.test/chat"),
+    )
+    rate_limit = RateLimitError("rate limited", response=response, body=None)
+    sleeps = []
+    monkeypatch.setattr("src.agent.llm_engine.time.sleep", sleeps.append)
+
+    class Completions:
+        def __init__(self):
+            self.calls = []
+
+        def create(self, **kwargs):
+            self.calls.append(kwargs)
+            if len(self.calls) < 3:
+                raise rate_limit
+            return SimpleNamespace(
+                choices=[
+                    SimpleNamespace(message=SimpleNamespace(content="ok"))
+                ],
+                usage=SimpleNamespace(
+                    prompt_tokens=7,
+                    completion_tokens=2,
+                    prompt_tokens_details=None,
+                ),
+            )
+
+    completions = Completions()
+    engine = OpenAIEngine(
+        model="test-model",
+        api_key="test-key",
+        temperature=0.7,
+        seed=1,
+    )
+    engine.client = SimpleNamespace(
+        chat=SimpleNamespace(completions=completions)
+    )
+
+    result = engine.generate("prompt", temperature=0)
+
+    assert result["text"] == "ok"
+    assert len(completions.calls) == 3
+    assert sleeps == [0.25, 0.25]
+    assert engine.backoff_seconds == pytest.approx(0.5)
+    assert all(call["temperature"] == 0 for call in completions.calls)
+    assert all(call["seed"] == 1 for call in completions.calls)
+
+
+def test_openai_client_disables_sdk_retries_and_omits_unset_seed(monkeypatch):
+    import openai
+
+    captured = {}
+    request_kwargs = {}
+
+    class FakeOpenAI:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+            self.chat = SimpleNamespace(
+                completions=SimpleNamespace(
+                    create=lambda **request: (
+                        request_kwargs.update(request)
+                        or SimpleNamespace(
+                            choices=[
+                                SimpleNamespace(
+                                    message=SimpleNamespace(content="ok")
+                                )
+                            ],
+                            usage=None,
+                        )
+                    )
+                )
+            )
+
+    monkeypatch.setattr(openai, "OpenAI", FakeOpenAI)
+    engine = OpenAIEngine(
+        api_key="test-key",
+        temperature=0.7,
+        request_timeout=17,
+    )
+
+    assert engine.load_model()
+    engine.generate("prompt", temperature=0)
+
+    assert captured["max_retries"] == 0
+    assert captured["timeout"] == 17
+    assert request_kwargs["temperature"] == 0
+    assert "seed" not in request_kwargs

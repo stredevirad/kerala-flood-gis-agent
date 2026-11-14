@@ -16,7 +16,7 @@
   - [x] F2 terrain operations reject geographic CRS
   - [x] F3 Windows UTF-8 file handling
   - [x] F4 conversation trim respects context budget
-  - [ ] F5 OpenAI retries, zero temperature and optional seed
+  - [x] F5 OpenAI retries, zero temperature and optional seed
   - [ ] Run targeted fixes tests
   - [ ] Run full baseline suite and compare with Phase 0
 - [ ] Phase 2 — data preparation

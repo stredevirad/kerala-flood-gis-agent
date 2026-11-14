@@ -28,8 +28,11 @@ it (the product turns the first one into an aborted run rather than letting
 the loop retry blindly).
 """
 import os
+import random
 import re
 import time
+from datetime import timezone
+from email.utils import parsedate_to_datetime
 from typing import Optional, Dict, Any, List
 
 # Open-weight reasoning models (Qwen3, the R1 distills, and most of what a local
@@ -72,6 +75,8 @@ class OpenAIEngine:
         max_tokens: int = 2048,
         base_url: str = None,
         cost_per_m: tuple = (2.5, 10.0),  # (input_cost, output_cost) per 1M tokens
+        seed: Optional[int] = None,
+        request_timeout: float = 600,
     ):
         self.model_name = model
         self.api_key = api_key or os.environ.get("OPENAI_API_KEY", "")
@@ -79,6 +84,9 @@ class OpenAIEngine:
         self.max_tokens = max_tokens
         self.base_url = base_url
         self.cost_per_m = cost_per_m
+        self.seed = seed
+        self.request_timeout = request_timeout
+        self.backoff_seconds = 0.0
         self.client = None
 
         self._total_calls = 0
@@ -97,7 +105,11 @@ class OpenAIEngine:
         """Create the client. Returns False instead of raising."""
         try:
             from openai import OpenAI
-            kwargs = {"api_key": self.api_key}
+            kwargs = {
+                "api_key": self.api_key,
+                "max_retries": 0,
+                "timeout": self.request_timeout,
+            }
             if self.base_url:
                 kwargs["base_url"] = self.base_url
             self.client = OpenAI(**kwargs)
@@ -154,6 +166,13 @@ class OpenAIEngine:
         needs_manual_stop = is_gpt5 or is_gemini_thinking
 
         try:
+            from openai import (
+                APIConnectionError,
+                APITimeoutError,
+                InternalServerError,
+                RateLimitError,
+            )
+
             messages = []
             if system_prompt:
                 messages.append({"role": "system", "content": system_prompt})
@@ -176,18 +195,53 @@ class OpenAIEngine:
                 kwargs["max_tokens"] = effective_max_tokens
                 kwargs["stop"] = stop
             if self._send_temperature:
-                kwargs["temperature"] = temperature or self.temperature
-            try:
-                response = self.client.chat.completions.create(**kwargs)
-            except Exception as e:
-                # Reasoning models accept only their default temperature and
-                # answer anything else with a 400. Retry once without it, and
-                # remember for the rest of the run.
-                if self._send_temperature and "temperature" in str(e).lower():
-                    self._send_temperature = False
-                    kwargs.pop("temperature", None)
+                kwargs["temperature"] = (
+                    temperature if temperature is not None else self.temperature
+                )
+            if self.seed is not None:
+                kwargs["seed"] = self.seed
+
+            retryable_errors = (
+                RateLimitError,
+                APIConnectionError,
+                APITimeoutError,
+                InternalServerError,
+            )
+            response = None
+            for attempt in range(6):
+                try:
                     response = self.client.chat.completions.create(**kwargs)
-                else:
+                    break
+                except retryable_errors as e:
+                    if attempt == 5:
+                        raise
+
+                    response_obj = getattr(e, "response", None)
+                    headers = getattr(response_obj, "headers", {}) or {}
+                    retry_after = headers.get("retry-after")
+                    delay = None
+                    if retry_after is not None:
+                        try:
+                            delay = max(0.0, float(retry_after))
+                        except (TypeError, ValueError):
+                            try:
+                                retry_at = parsedate_to_datetime(retry_after)
+                                if retry_at.tzinfo is None:
+                                    retry_at = retry_at.replace(tzinfo=timezone.utc)
+                                delay = max(0.0, retry_at.timestamp() - time.time())
+                            except (TypeError, ValueError, OverflowError):
+                                delay = None
+                    if delay is None:
+                        delay = min(60, 2**attempt) + random.random()
+                    time.sleep(delay)
+                    self.backoff_seconds += delay
+                except Exception as e:
+                    # Reasoning models may reject an explicitly set temperature.
+                    # Retry once without it and remember that for the run.
+                    if self._send_temperature and "temperature" in str(e).lower():
+                        self._send_temperature = False
+                        kwargs.pop("temperature", None)
+                        continue
                     raise
 
             # A thinking model sometimes comes back with no content at all.
