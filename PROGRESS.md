@@ -7,8 +7,8 @@
   - [x] 0.3 write AGENTS.md
   - [x] 0.4 write PROGRESS.md phase checklist
   - [x] 0.5 create small Kerala files
-  - [ ] 0.6 build venv in background
-  - [ ] 0.7 run baseline tests
+  - [x] 0.6 build venv in background
+  - [x] 0.7 run baseline tests
   - [ ] 0.8 set up Ollama and confirm 16K context
   - [ ] 0.9 measure default and CPU-only timing
 - [ ] Phase 1 — F1–F5 and regression tests
@@ -50,7 +50,7 @@
   - [ ] Optional trace HTML viewer
   - [ ] Verify report numbers against summary/manifest
 ## Numbers so far
-- Baseline tests: pending
+- Baseline: 9 passed, 5 failed; failures: test_local_probe_add_test_run, test_run_to_completion, test_cancel_busy_and_rejoin, test_toolbox_is_recorded, test_settings_mask_keys.
 - Ollama context: pending
 - Timing: pending (Vulkan/default and CPU-only)
 - Peak RAM/backend: pending
@@ -61,4 +61,20 @@
 ## Needs Kirito
 - None yet.
 ## Last acceptance output
-- Pending Phase 0 acceptance.
+Command: .\.venv\Scripts\python.exe -m pytest -q tests --ignore=tests\test_ui.py
+Last 15 lines:
+    E         - 0o600
+    E         + 0o666
+
+tests\test_smoke.py:142: AssertionError
+---------------------------- Captured stderr call -----------------------------
+2026-11-14 12:11:11,041 [INFO] stored API key for openai (sk-ab…1234)
+------------------------------ Captured log call -----------------------------
+INFO     gisclaw:server.py:176 stored API key for openai (sk-ab…1234)
+=========================== short test summary info ===========================
+FAILED tests/test_local.py::test_local_probe_add_test_run - assert (False is ...
+FAILED tests/test_smoke.py::test_run_to_completion - AssertionError: assert (...
+FAILED tests/test_smoke.py::test_cancel_busy_and_rejoin - assert (None)
+FAILED tests/test_smoke.py::test_toolbox_is_recorded - assert (False)
+FAILED tests/test_smoke.py::test_settings_mask_keys - AssertionError: assert ...
+5 failed, 9 passed in 31.58s
