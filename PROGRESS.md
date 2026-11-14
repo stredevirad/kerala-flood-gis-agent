@@ -102,6 +102,7 @@ All runs used GISReActAgent on examples\urban-heat-madison, task "Compute the me
 - The resumable script was added in commit `1e01f80`; `python -m kerala.prepare_data --stage aoi` completed with `AOI cached` and `Area of interest ready`.
 - Taluk verification passed: Ernakulam (7): Kothamangalam, Muvattupuzha, Kunnathunad, Aluva, Paravur, Kanayannur, Kochi; Alappuzha (6): Kuttanad, Chengannur, Mavelikkara, Karthikappally, Ambalappuzha, Cherthala. All `name` values are ASCII; Kuttanad is present. The OSM result is stored as `data/kerala/layers/taluks.gpkg`.
 - Target grid cached as EPSG:32643 at 30 m: 2,765 × 4,400 = 12,166,000 pixels (<25 million); exterior AOI pixels will be nodata in each agent-visible raster.
+- Raster outputs currently built: Sentinel-1 VV (two descending 2018-08-21 slices), JRC seasonality, and Copernicus DEM. RTC sample percentiles were 0.0288/0.2867/0.8537, confirming linear gamma0; raster percentiles, CRSs, nodata, and 4,819,784 inside-AOI pixels were inspected. OSM hospitals also completed (860 features); schools and roads remain in progress after Overpass capacity errors.
 
 ## Phase 0 acceptance outputs (preserved)
 
