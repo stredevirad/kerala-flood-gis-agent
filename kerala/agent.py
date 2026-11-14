@@ -171,6 +171,11 @@ class AnswerChecker:
         status = answer["status"]
         value = answer["value"]
         unit = answer["unit"]
+        if self.expected_status == "ok":
+            if value is None:
+                issues.append("value must not be null for an answerable question")
+            if unit != self.expected_unit:
+                issues.append(f"unit must equal expected unit {self.expected_unit!r}")
         if status == "cannot_answer":
             if value is not None:
                 issues.append("value must be null when status is cannot_answer")
@@ -180,9 +185,6 @@ class AnswerChecker:
 
         if value is None:
             issues.append("value must not be null when status is ok")
-        if self.expected_status == "ok":
-            if unit != self.expected_unit:
-                issues.append(f"unit must equal expected unit {self.expected_unit!r}")
 
         if unit == "count":
             if isinstance(value, bool) or not isinstance(value, int):

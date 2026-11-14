@@ -1,5 +1,5 @@
 # PROGRESS
-## Status: Phase 3 — in progress (Phase 2 remains stopped at the threshold check)
+## Status: Phase 3 — done (Phase 2 remains stopped at the threshold check)
 ## Checklist
 - [x] Phase 0
   - [x] 0.1 git init + .gitignore + upstream snapshot commit
@@ -28,11 +28,11 @@
   - [ ] Manifest and cache outputs
   - [ ] Optional NASA cross-check
   - [ ] Lock layers and acceptance check
-- [ ] Phase 3 — pack, AnswerChecker, agent, prompt
+- [x] Phase 3 — pack, AnswerChecker, agent, prompt
   - [x] Pack schema and tool
   - [x] KeralaAgent and AnswerChecker
   - [x] Prompt construction and task composition
-  - [ ] Offline tests
+  - [x] Offline tests
 - [ ] Phase 4 — questions, gold, review (STOP gate)
   - [ ] Questions and rubric
   - [ ] Independent gold and sensitivity results
@@ -110,6 +110,7 @@ All runs used GISReActAgent on examples\urban-heat-madison, task "Compute the me
 - Schema-v1 pack YAML and `kerala.pack.pack` now provide schema checking, manifest binding, value-free parameter indexing, and per-run `domain_param` call logging.
 - `AnswerChecker` and `KeralaAgent` now enforce answer shape/unit/range rules, preserve numbered answer attempts, call GISclaw's built-in output guard, and append checker records without accessing pack values.
 - Prompt and task builders now reuse GISclaw's `SYSTEM_PROMPT`, skill and data blocks, add the value-free pack index only in the pack arm, keep parameter task sections arm-specific, and profile the dataset through the existing junction helper.
+- Phase 3 acceptance passed: 26 offline tests. Tests use a temporary manifest value inside the declared range; the production pack still requires the real Phase 2 manifest and rejects the currently observed out-of-range T.
 
 ## Phase 2 stop output
 Command:
@@ -210,3 +211,9 @@ FAILED tests/test_smoke.py::test_settings_mask_keys - AssertionError: assert ...
 5 failed, 19 passed in 20.72s
 
 The five failing baseline tests are identical to the Phase 0 failures; no regressions. The 10 new Kerala fix tests passed.
+
+Phase 3 acceptance command:
+.\.venv\Scripts\python.exe -m pytest -q tests\test_kerala_pack.py tests\test_kerala_checker.py tests\test_kerala_leak.py
+Last output:
+..........................                                               [100%]
+26 passed in 1.63s
