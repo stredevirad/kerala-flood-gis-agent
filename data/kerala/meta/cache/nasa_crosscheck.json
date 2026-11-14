@@ -1,0 +1,17 @@
+{
+  "source": "https://maps.disasters.nasa.gov/ags03/rest/services/Kerala_India_Flood/Sentinel1_20180821_water_extent/MapServer/export",
+  "retrieved_at": "2026-11-14T15:49:20.951014+00:00",
+  "bbox": [
+    627360.0,
+    1007370.0,
+    710310.0,
+    1139370.0
+  ],
+  "bbox_crs": "EPSG:32643",
+  "size": [
+    1200,
+    1910
+  ],
+  "status": "skipped",
+  "reason": "HTTPError: HTTP Error 404: Not Found"
+}

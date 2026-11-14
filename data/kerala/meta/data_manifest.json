@@ -1,0 +1,812 @@
+{
+  "created_at": "2026-11-14T15:50:14.095670+00:00",
+  "target_grid": {
+    "crs": "EPSG:32643",
+    "pixel_size_m": 30,
+    "width": 2765,
+    "height": 4400
+  },
+  "stac_assets": [
+    {
+      "collection": "sentinel-1-rtc",
+      "item_id": "S1A_IW_GRDH_1SDV_20180821T004044_20180821T004109_023337_0289D5_rtc",
+      "asset": "vv",
+      "unsigned_href": "https://sentinel1euwestrtc.blob.core.windows.net/sentinel1-grd-rtc/GRD/2018/8/21/IW/DV/S1A_IW_GRDH_1SDV_20180821T004044_20180821T004109_023337_0289D5_D07A/measurement/iw-vv.rtc.tiff",
+      "acquisition_time": "2018-08-21T00:40:57.143068Z"
+    },
+    {
+      "collection": "sentinel-1-rtc",
+      "item_id": "S1A_IW_GRDH_1SDV_20180821T004109_20180821T004134_023337_0289D5_rtc",
+      "asset": "vv",
+      "unsigned_href": "https://sentinel1euwestrtc.blob.core.windows.net/sentinel1-grd-rtc/GRD/2018/8/21/IW/DV/S1A_IW_GRDH_1SDV_20180821T004109_20180821T004134_023337_0289D5_B2B2/measurement/iw-vv.rtc.tiff",
+      "acquisition_time": "2018-08-21T00:41:21.909646Z"
+    },
+    {
+      "collection": "jrc-gsw",
+      "item_id": "70E_20Nv1_3_2020",
+      "asset": "seasonality",
+      "unsigned_href": "https://ai4edataeuwest.blob.core.windows.net/jrcglobalwater/seasonality/seasonality_70E_20Nv1_3_2020cog.tif",
+      "acquisition_time": "2020-07-01T00:00:00Z"
+    },
+    {
+      "collection": "jrc-gsw",
+      "item_id": "70E_10Nv1_3_2020",
+      "asset": "seasonality",
+      "unsigned_href": "https://ai4edataeuwest.blob.core.windows.net/jrcglobalwater/seasonality/seasonality_70E_10Nv1_3_2020cog.tif",
+      "acquisition_time": "2020-07-01T00:00:00Z"
+    },
+    {
+      "collection": "cop-dem-glo-30",
+      "item_id": "Copernicus_DSM_COG_10_N10_00_E076_00_DEM",
+      "asset": "data",
+      "unsigned_href": "https://elevationeuwest.blob.core.windows.net/copernicus-dem/COP30_hh/Copernicus_DSM_COG_10_N10_00_E076_00_DEM.tif",
+      "acquisition_time": "2021-04-22T00:00:00Z"
+    },
+    {
+      "collection": "cop-dem-glo-30",
+      "item_id": "Copernicus_DSM_COG_10_N09_00_E076_00_DEM",
+      "asset": "data",
+      "unsigned_href": "https://elevationeuwest.blob.core.windows.net/copernicus-dem/COP30_hh/Copernicus_DSM_COG_10_N09_00_E076_00_DEM.tif",
+      "acquisition_time": "2021-04-22T00:00:00Z"
+    }
+  ],
+  "rtc_units_found": {
+    "units": "linear gamma0",
+    "sample_percentiles": {
+      "p05": 0.028753184992820025,
+      "p50": 0.28673940896987915,
+      "p95": 0.8537097394466399
+    }
+  },
+  "T_raw": -11.649999999999999,
+  "T_otsu": -11.649999999999999,
+  "T_ki": -12.549999999999999,
+  "T_valley": -13.95,
+  "T": -14.0,
+  "threshold_choice": {
+    "method": "histogram_valley",
+    "post_hoc": true,
+    "reason": "User-approved post-hoc choice: T_ki failed the range rule by 0.45 dB; the histogram shows Otsu and KI on the land-mode shoulder, with the JRC seasonality 1-9 flooded-vegetation tail breaking KI's Gaussian assumption. T is the 1 dB-smoothed trough between the water and land modes.",
+    "sensitivity_db": 1.0
+  },
+  "water_pixel_fraction": 0.13563610093520326,
+  "otsu_water_pixel_fraction": 0.15257113275158998,
+  "threshold_diagnostics": {
+    "histogram": {
+      "bins": 350,
+      "bin_width_db": 0.1,
+      "min_db": -30.0,
+      "max_db": 5.0
+    },
+    "valid_pixels": 4806014,
+    "T_otsu": -11.649999999999999,
+    "T_ki": -12.549999999999999,
+    "T_valley": -13.95,
+    "T": -14.0,
+    "threshold_choice": {
+      "method": "histogram_valley",
+      "post_hoc": true,
+      "reason": "User-approved post-hoc choice: T_ki failed the range rule by 0.45 dB; the histogram shows Otsu and KI on the land-mode shoulder, with the JRC seasonality 1-9 flooded-vegetation tail breaking KI's Gaussian assumption. T is the 1 dB-smoothed trough between the water and land modes.",
+      "sensitivity_db": 1.0
+    },
+    "ki_criterion": 3.4741316249990346,
+    "water_mode_db": -18.849999999999998,
+    "land_mode_db": -5.149999999999999,
+    "gate_passed": false,
+    "otsu_water_pixel_fraction": 0.15257113275158998,
+    "water_pixel_fraction": 0.13563610093520326,
+    "otsu_alternatives": {
+      "AOI": {
+        "pixels": 4806014,
+        "T_otsu": -11.649999999999999
+      },
+      "excluding_JRC_ge_10": {
+        "pixels": 4533033,
+        "T_otsu": -11.350000381469727
+      },
+      "JRC_ge_10": {
+        "pixels": 272981,
+        "T_otsu": -14.949999809265137
+      },
+      "JRC_1_9": {
+        "pixels": 343566,
+        "T_otsu": -14.149999618530273
+      },
+      "JRC_0": {
+        "pixels": 4189467,
+        "T_otsu": -9.550000190734863
+      },
+      "Ernakulam": {
+        "pixels": 3234661,
+        "T_otsu": -11.149999618530273
+      },
+      "Alappuzha": {
+        "pixels": 1571353,
+        "T_otsu": -11.949999809265137
+      }
+    },
+    "sea_candidate_pixels": 0,
+    "spot_medians": {
+      "Vembanad Lake centre": {
+        "longitude": 76.39,
+        "latitude": 9.6,
+        "radius_m": 500,
+        "pixels": 869,
+        "median_vv_db": -19.504287719726562
+      },
+      "Central Kochi/MG Road": {
+        "longitude": 76.285,
+        "latitude": 9.97,
+        "radius_m": 500,
+        "pixels": 835,
+        "median_vv_db": -3.526521682739258
+      },
+      "Kuttanad paddy near Nedumudi": {
+        "longitude": 76.37,
+        "latitude": 9.43,
+        "radius_m": 500,
+        "pixels": 871,
+        "median_vv_db": -18.72114372253418
+      }
+    },
+    "histogram_path": "data\\kerala\\meta\\cache\\vv_histogram.png",
+    "threshold_plot_path": "data\\kerala\\meta\\cache\\vv_histogram_thresholds.png"
+  },
+  "pixels_and_km2_by_district": {
+    "Ernakulam": {
+      "water": {
+        "pixels": 204547,
+        "km2": 184.0923
+      },
+      "permanent_water": {
+        "pixels": 138060,
+        "km2": 124.254
+      },
+      "steep_ground": {
+        "pixels": 1763312,
+        "km2": 1586.9808
+      },
+      "flood": {
+        "pixels": 64069,
+        "km2": 57.6621
+      }
+    },
+    "Alappuzha": {
+      "water": {
+        "pixels": 447322,
+        "km2": 402.5898
+      },
+      "permanent_water": {
+        "pixels": 135025,
+        "km2": 121.5225
+      },
+      "steep_ground": {
+        "pixels": 235708,
+        "km2": 212.1372
+      },
+      "flood": {
+        "pixels": 310021,
+        "km2": 279.0189
+      }
+    }
+  },
+  "pixels_and_km2_by_taluk": {
+    "Kothamangalam": {
+      "district": "Ernakulam",
+      "aoi_pixels": 905078,
+      "flood_pixels": 12114,
+      "flood_km2": 10.9026,
+      "flooded_percent": 1.338448177947094
+    },
+    "Muvattupuzha": {
+      "district": "Ernakulam",
+      "aoi_pixels": 487917,
+      "flood_pixels": 5558,
+      "flood_km2": 5.0022,
+      "flooded_percent": 1.139128171389806
+    },
+    "Kunnathunad": {
+      "district": "Ernakulam",
+      "aoi_pixels": 523439,
+      "flood_pixels": 5942,
+      "flood_km2": 5.3478,
+      "flooded_percent": 1.135184806634584
+    },
+    "Aluva": {
+      "district": "Ernakulam",
+      "aoi_pixels": 597045,
+      "flood_pixels": 9731,
+      "flood_km2": 8.7579,
+      "flooded_percent": 1.6298603957825624
+    },
+    "Paravur": {
+      "district": "Ernakulam",
+      "aoi_pixels": 217551,
+      "flood_pixels": 12015,
+      "flood_km2": 10.8135,
+      "flooded_percent": 5.522842919591268
+    },
+    "Kanayannur": {
+      "district": "Ernakulam",
+      "aoi_pixels": 353634,
+      "flood_pixels": 9911,
+      "flood_km2": 8.9199,
+      "flooded_percent": 2.802615133160273
+    },
+    "Kochi": {
+      "district": "Ernakulam",
+      "aoi_pixels": 159788,
+      "flood_pixels": 8798,
+      "flood_km2": 7.9182,
+      "flooded_percent": 5.506045510301149
+    },
+    "Kuttanad": {
+      "district": "Alappuzha",
+      "aoi_pixels": 339526,
+      "flood_pixels": 190941,
+      "flood_km2": 171.8469,
+      "flooded_percent": 56.23751936523271
+    },
+    "Chengannur": {
+      "district": "Alappuzha",
+      "aoi_pixels": 159979,
+      "flood_pixels": 15770,
+      "flood_km2": 14.193,
+      "flooded_percent": 9.857543802624095
+    },
+    "Mavelikkara": {
+      "district": "Alappuzha",
+      "aoi_pixels": 255111,
+      "flood_pixels": 20070,
+      "flood_km2": 18.063,
+      "flooded_percent": 7.867163705210673
+    },
+    "Karthikappally": {
+      "district": "Alappuzha",
+      "aoi_pixels": 253134,
+      "flood_pixels": 32922,
+      "flood_km2": 29.6298,
+      "flooded_percent": 13.00575979520728
+    },
+    "Ambalappuzha": {
+      "district": "Alappuzha",
+      "aoi_pixels": 204550,
+      "flood_pixels": 37048,
+      "flood_km2": 33.3432,
+      "flooded_percent": 18.111953067709607
+    },
+    "Cherthala": {
+      "district": "Alappuzha",
+      "aoi_pixels": 363032,
+      "flood_pixels": 13270,
+      "flood_km2": 11.943,
+      "flooded_percent": 3.655325150399965
+    }
+  },
+  "sensitivity_at_plus_minus_1_db": {
+    "-15.0": {
+      "T_db": -15.0,
+      "water_pixel_fraction": 0.12896570838120738,
+      "districts": {
+        "Ernakulam": {
+          "flood_pixels": 56947,
+          "flood_km2": 51.2523
+        },
+        "Alappuzha": {
+          "flood_pixels": 295499,
+          "flood_km2": 265.9491
+        }
+      },
+      "taluks": {
+        "Kothamangalam": {
+          "district": "Ernakulam",
+          "flood_pixels": 11564,
+          "flood_km2": 10.4076,
+          "flooded_percent": 1.2776799347680532
+        },
+        "Muvattupuzha": {
+          "district": "Ernakulam",
+          "flood_pixels": 5062,
+          "flood_km2": 4.5558,
+          "flooded_percent": 1.037471537167182
+        },
+        "Kunnathunad": {
+          "district": "Ernakulam",
+          "flood_pixels": 5281,
+          "flood_km2": 4.7529,
+          "flooded_percent": 1.0089045714973472
+        },
+        "Aluva": {
+          "district": "Ernakulam",
+          "flood_pixels": 8516,
+          "flood_km2": 7.6644,
+          "flooded_percent": 1.4263581472083344
+        },
+        "Paravur": {
+          "district": "Ernakulam",
+          "flood_pixels": 10400,
+          "flood_km2": 9.36,
+          "flooded_percent": 4.780488253329104
+        },
+        "Kanayannur": {
+          "district": "Ernakulam",
+          "flood_pixels": 8536,
+          "flood_km2": 7.6824,
+          "flooded_percent": 2.413795053643032
+        },
+        "Kochi": {
+          "district": "Ernakulam",
+          "flood_pixels": 7588,
+          "flood_km2": 6.8292,
+          "flooded_percent": 4.748792149598217
+        },
+        "Kuttanad": {
+          "district": "Alappuzha",
+          "flood_pixels": 183794,
+          "flood_km2": 165.4146,
+          "flooded_percent": 54.132525933212776
+        },
+        "Chengannur": {
+          "district": "Alappuzha",
+          "flood_pixels": 14390,
+          "flood_km2": 12.951,
+          "flooded_percent": 8.994930584639233
+        },
+        "Mavelikkara": {
+          "district": "Alappuzha",
+          "flood_pixels": 18816,
+          "flood_km2": 16.9344,
+          "flooded_percent": 7.375612968472547
+        },
+        "Karthikappally": {
+          "district": "Alappuzha",
+          "flood_pixels": 31343,
+          "flood_km2": 28.2087,
+          "flooded_percent": 12.381979504926244
+        },
+        "Ambalappuzha": {
+          "district": "Alappuzha",
+          "flood_pixels": 35664,
+          "flood_km2": 32.0976,
+          "flooded_percent": 17.43534588120264
+        },
+        "Cherthala": {
+          "district": "Alappuzha",
+          "flood_pixels": 11492,
+          "flood_km2": 10.3428,
+          "flooded_percent": 3.1655611626523283
+        }
+      }
+    },
+    "-14.0": {
+      "T_db": -14.0,
+      "water_pixel_fraction": 0.13563610093520326,
+      "districts": {
+        "Ernakulam": {
+          "flood_pixels": 64069,
+          "flood_km2": 57.6621
+        },
+        "Alappuzha": {
+          "flood_pixels": 310021,
+          "flood_km2": 279.0189
+        }
+      },
+      "taluks": {
+        "Kothamangalam": {
+          "district": "Ernakulam",
+          "flood_pixels": 12114,
+          "flood_km2": 10.9026,
+          "flooded_percent": 1.338448177947094
+        },
+        "Muvattupuzha": {
+          "district": "Ernakulam",
+          "flood_pixels": 5558,
+          "flood_km2": 5.0022,
+          "flooded_percent": 1.139128171389806
+        },
+        "Kunnathunad": {
+          "district": "Ernakulam",
+          "flood_pixels": 5942,
+          "flood_km2": 5.3478,
+          "flooded_percent": 1.135184806634584
+        },
+        "Aluva": {
+          "district": "Ernakulam",
+          "flood_pixels": 9731,
+          "flood_km2": 8.7579,
+          "flooded_percent": 1.6298603957825624
+        },
+        "Paravur": {
+          "district": "Ernakulam",
+          "flood_pixels": 12015,
+          "flood_km2": 10.8135,
+          "flooded_percent": 5.522842919591268
+        },
+        "Kanayannur": {
+          "district": "Ernakulam",
+          "flood_pixels": 9911,
+          "flood_km2": 8.9199,
+          "flooded_percent": 2.802615133160273
+        },
+        "Kochi": {
+          "district": "Ernakulam",
+          "flood_pixels": 8798,
+          "flood_km2": 7.9182,
+          "flooded_percent": 5.506045510301149
+        },
+        "Kuttanad": {
+          "district": "Alappuzha",
+          "flood_pixels": 190941,
+          "flood_km2": 171.8469,
+          "flooded_percent": 56.23751936523271
+        },
+        "Chengannur": {
+          "district": "Alappuzha",
+          "flood_pixels": 15770,
+          "flood_km2": 14.193,
+          "flooded_percent": 9.857543802624095
+        },
+        "Mavelikkara": {
+          "district": "Alappuzha",
+          "flood_pixels": 20070,
+          "flood_km2": 18.063,
+          "flooded_percent": 7.867163705210673
+        },
+        "Karthikappally": {
+          "district": "Alappuzha",
+          "flood_pixels": 32922,
+          "flood_km2": 29.6298,
+          "flooded_percent": 13.00575979520728
+        },
+        "Ambalappuzha": {
+          "district": "Alappuzha",
+          "flood_pixels": 37048,
+          "flood_km2": 33.3432,
+          "flooded_percent": 18.111953067709607
+        },
+        "Cherthala": {
+          "district": "Alappuzha",
+          "flood_pixels": 13270,
+          "flood_km2": 11.943,
+          "flooded_percent": 3.655325150399965
+        }
+      }
+    },
+    "-13.0": {
+      "T_db": -13.0,
+      "water_pixel_fraction": 0.14228922346043935,
+      "districts": {
+        "Ernakulam": {
+          "flood_pixels": 71542,
+          "flood_km2": 64.3878
+        },
+        "Alappuzha": {
+          "flood_pixels": 323812,
+          "flood_km2": 291.4308
+        }
+      },
+      "taluks": {
+        "Kothamangalam": {
+          "district": "Ernakulam",
+          "flood_pixels": 12510,
+          "flood_km2": 11.259,
+          "flooded_percent": 1.3822013130360036
+        },
+        "Muvattupuzha": {
+          "district": "Ernakulam",
+          "flood_pixels": 6047,
+          "flood_km2": 5.4423,
+          "flooded_percent": 1.239350135371385
+        },
+        "Kunnathunad": {
+          "district": "Ernakulam",
+          "flood_pixels": 6680,
+          "flood_km2": 6.012,
+          "flooded_percent": 1.2761754473778224
+        },
+        "Aluva": {
+          "district": "Ernakulam",
+          "flood_pixels": 10956,
+          "flood_km2": 9.8604,
+          "flooded_percent": 1.8350375599829158
+        },
+        "Paravur": {
+          "district": "Ernakulam",
+          "flood_pixels": 13771,
+          "flood_km2": 12.3939,
+          "flooded_percent": 6.330009974672605
+        },
+        "Kanayannur": {
+          "district": "Ernakulam",
+          "flood_pixels": 11402,
+          "flood_km2": 10.2618,
+          "flooded_percent": 3.2242374884767866
+        },
+        "Kochi": {
+          "district": "Ernakulam",
+          "flood_pixels": 10176,
+          "flood_km2": 9.1584,
+          "flooded_percent": 6.368438180589281
+        },
+        "Kuttanad": {
+          "district": "Alappuzha",
+          "flood_pixels": 197218,
+          "flood_km2": 177.4962,
+          "flooded_percent": 58.08627321618963
+        },
+        "Chengannur": {
+          "district": "Alappuzha",
+          "flood_pixels": 17178,
+          "flood_km2": 15.4602,
+          "flooded_percent": 10.73765931778546
+        },
+        "Mavelikkara": {
+          "district": "Alappuzha",
+          "flood_pixels": 21349,
+          "flood_km2": 19.2141,
+          "flooded_percent": 8.368514097784885
+        },
+        "Karthikappally": {
+          "district": "Alappuzha",
+          "flood_pixels": 34449,
+          "flood_km2": 31.0041,
+          "flooded_percent": 13.608997606011046
+        },
+        "Ambalappuzha": {
+          "district": "Alappuzha",
+          "flood_pixels": 38448,
+          "flood_km2": 34.6032,
+          "flooded_percent": 18.7963823026155
+        },
+        "Cherthala": {
+          "district": "Alappuzha",
+          "flood_pixels": 15170,
+          "flood_km2": 13.653,
+          "flooded_percent": 4.178694991075167
+        }
+      }
+    }
+  },
+  "pixels_and_km2_total": {
+    "water": 586.6821,
+    "permanent_water": 245.7765,
+    "steep_ground": 1799.118,
+    "flood": 336.681
+  },
+  "feature_counts": {
+    "districts.gpkg": {
+      "features": 2,
+      "geometry_types": {
+        "Polygon": 2
+      }
+    },
+    "taluks.gpkg": {
+      "features": 13,
+      "geometry_types": {
+        "Polygon": 13
+      }
+    },
+    "hospitals.geojson": {
+      "features": 860,
+      "geometry_types": {
+        "Point": 510,
+        "Polygon": 350
+      }
+    },
+    "schools.geojson": {
+      "features": 2295,
+      "geometry_types": {
+        "Polygon": 1869,
+        "Point": 426
+      }
+    },
+    "roads_major.gpkg": {
+      "features": 6075,
+      "geometry_types": {
+        "LineString": 6075
+      }
+    },
+    "s1_vv_20180821_db.tif": {
+      "pixels": 12166000,
+      "bands": 1
+    },
+    "jrc_seasonality.tif": {
+      "pixels": 12166000,
+      "bands": 1
+    },
+    "dem_cop30.tif": {
+      "pixels": 12166000,
+      "bands": 1
+    },
+    "flood_extent_20180821.gpkg": {
+      "features": 1,
+      "geometry_types": {
+        "MultiPolygon": 1
+      }
+    }
+  },
+  "osm_retrieval_time": "2026-11-14T15:28:16.575509+00:00",
+  "osm_retrieval": {
+    "retrieved_at": "2026-11-14T15:28:16.575509+00:00",
+    "layers": {
+      "schools.geojson": {
+        "retrieved_at": "2026-11-14T15:28:14.552868+00:00",
+        "source": "OpenStreetMap Overpass API",
+        "endpoints": [
+          "https://overpass-api.de/api/interpreter"
+        ],
+        "district_queries": [
+          "Ernakulam",
+          "Alappuzha"
+        ],
+        "fetched_rows": 4136,
+        "null_or_empty_geometry_dropped_by_element": {},
+        "geometry_counts_before_save_by_element": {
+          "way": {
+            "Polygon": 1864
+          },
+          "node": {
+            "Point": 426
+          },
+          "relation": {
+            "Polygon": 5
+          }
+        },
+        "geometry_counts_after_save": {
+          "Polygon": 1869,
+          "Point": 426
+        },
+        "features_after_save": 2295
+      },
+      "roads_major.gpkg": {
+        "retrieved_at": "2026-11-14T15:28:16.575509+00:00",
+        "source": "OpenStreetMap Overpass API",
+        "endpoints": [
+          "https://overpass-api.de/api/interpreter"
+        ],
+        "district_queries": [
+          "Ernakulam",
+          "Alappuzha"
+        ],
+        "fetched_rows": 10234,
+        "null_or_empty_geometry_dropped_by_element": {},
+        "geometry_counts_before_save_by_element": {
+          "way": {
+            "LineString": 6075
+          }
+        },
+        "geometry_counts_after_save": {
+          "LineString": 6075
+        },
+        "features_after_save": 6075
+      },
+      "hospitals.geojson": {
+        "retrieved_at": "2026-11-14T15:28:13.771405+00:00",
+        "source": "OpenStreetMap Overpass API",
+        "endpoints": [
+          "https://overpass-api.de/api/interpreter"
+        ],
+        "district_queries": [],
+        "fetched_rows": 1660,
+        "null_or_empty_geometry_dropped_by_element": {},
+        "geometry_counts_before_save_by_element": {
+          "node": {
+            "Point": 510
+          },
+          "way": {
+            "Polygon": 350
+          }
+        },
+        "geometry_counts_after_save": {
+          "Point": 510,
+          "Polygon": 350
+        },
+        "features_after_save": 860
+      }
+    }
+  },
+  "libraries": {
+    "geopandas": "1.2.0",
+    "shapely": "2.2.0",
+    "rasterio": "1.4.4",
+    "numpy": "2.4.6",
+    "osmnx": "2.1.1",
+    "pystac_client": "0.9.1",
+    "planetary_computer": "1.0.0"
+  },
+  "sha256": {
+    "districts.gpkg": "e4d439217f3b3a5150edebbb3580a0b6ca459e40041967af5ad9081f72a5e50d",
+    "taluks.gpkg": "35b200de9919e830da8bc8f2e8f3074cbe392aed9851224653d985faafcd3c38",
+    "hospitals.geojson": "e3b8ffac2301b2760e7b232071fef504bf45960c547d432d860a4e0d31e73134",
+    "schools.geojson": "8f7813d033601f7479764141b449089a162c4be460463201e057ec1865342e48",
+    "roads_major.gpkg": "ae1247158c9f3b1d599ef104de0c87b68794fff738e765d1bbd3d21b5d2517b2",
+    "s1_vv_20180821_db.tif": "041b79babfea87c1de05085ec2b6acf6a585ef773f2f533cd8f305ae5654f714",
+    "jrc_seasonality.tif": "9ed0ed21f71d037efd8ca9edc1097444da342ed8555e2ddafff780a29f5b61ea",
+    "dem_cop30.tif": "6a67e5a908be6ca69bea6a8ee76d923309602cd4a1889172833f3f54b323c304",
+    "flood_extent_20180821.gpkg": "f95d00baef86ab4ad7c6b90fbbed6198c38f331ad5e9f3e7848cca127417599a"
+  },
+  "taluks": [
+    {
+      "name": "Kothamangalam",
+      "name_local": "Kothamangalam",
+      "district": "Ernakulam"
+    },
+    {
+      "name": "Muvattupuzha",
+      "name_local": "Muvattupuzha",
+      "district": "Ernakulam"
+    },
+    {
+      "name": "Kunnathunad",
+      "name_local": "Kunnathunad",
+      "district": "Ernakulam"
+    },
+    {
+      "name": "Aluva",
+      "name_local": "Aluva",
+      "district": "Ernakulam"
+    },
+    {
+      "name": "Paravur",
+      "name_local": "Paravur",
+      "district": "Ernakulam"
+    },
+    {
+      "name": "Kanayannur",
+      "name_local": "Kanayannur",
+      "district": "Ernakulam"
+    },
+    {
+      "name": "Kochi",
+      "name_local": "Kochi",
+      "district": "Ernakulam"
+    },
+    {
+      "name": "Kuttanad",
+      "name_local": "Kuttanad",
+      "district": "Alappuzha"
+    },
+    {
+      "name": "Chengannur",
+      "name_local": "Chengannur",
+      "district": "Alappuzha"
+    },
+    {
+      "name": "Mavelikkara",
+      "name_local": "മാവേലിക്കര",
+      "district": "Alappuzha"
+    },
+    {
+      "name": "Karthikappally",
+      "name_local": "Karthikappally",
+      "district": "Alappuzha"
+    },
+    {
+      "name": "Ambalappuzha",
+      "name_local": "Ambalappuzha",
+      "district": "Alappuzha"
+    },
+    {
+      "name": "Cherthala",
+      "name_local": "Cherthala",
+      "district": "Alappuzha"
+    }
+  ],
+  "optional_nasa_crosscheck": {
+    "source": "https://maps.disasters.nasa.gov/ags03/rest/services/Kerala_India_Flood/Sentinel1_20180821_water_extent/MapServer/export",
+    "retrieved_at": "2026-11-14T15:49:20.951014+00:00",
+    "bbox": [
+      627360.0,
+      1007370.0,
+      710310.0,
+      1139370.0
+    ],
+    "bbox_crs": "EPSG:32643",
+    "size": [
+      1200,
+      1910
+    ],
+    "status": "skipped",
+    "reason": "HTTPError: HTTP Error 404: Not Found"
+  }
+}

@@ -1,5 +1,5 @@
 # PROGRESS
-## Status: Phase 2 resumed with approved post-hoc histogram-valley threshold; acceptance pending
+## Status: Phase 2 acceptance passed; stopped before Phase 4
 ## Checklist
 - [x] Phase 0
   - [x] 0.1 git init + .gitignore + upstream snapshot commit
@@ -19,15 +19,15 @@
   - [x] F5 OpenAI retries, zero temperature and optional seed
   - [x] Run targeted fixes tests
   - [x] Run full baseline suite and compare with Phase 0
-- [ ] Phase 2 — data preparation
+- [x] Phase 2 — data preparation
   - [x] Area of interest and district boundaries
   - [x] Taluk boundaries and verification
   - [x] Target grid
   - [x] Vector and raster layers
-  - [ ] Reference flood using approved T=-14.0 dB (T_valley rounded half-up)
-  - [ ] Manifest and cache outputs
-  - [ ] Optional NASA cross-check
-  - [ ] Lock layers and acceptance check
+  - [x] Reference flood using approved T=-14.0 dB (T_valley rounded half-up)
+  - [x] Manifest and cache outputs
+  - [x] Optional NASA cross-check attempted; skipped after HTTP 404
+  - [x] Lock layers and acceptance check
 - [x] Phase 3 — pack, AnswerChecker, agent, prompt
   - [x] Pack schema and tool
   - [x] KeralaAgent and AnswerChecker
@@ -83,7 +83,7 @@ All runs used GISReActAgent on examples\urban-heat-madison, task "Compute the me
 - Projected local matrix at warm timing: 52 × 3.85 minutes = 3.34 hours on CPU; 52 × 3.67 minutes = 3.18 hours on Vulkan. Cold CPU extrapolation would be about 6.41 hours. All are below the 20-hour cut threshold.
 - Timed runs over 25 minutes: 0 of 2 backend modes; naive observed share 0%. This is a two-run timing sample, and both runs ended through agent logic before any wall-clock timeout.
 - Cloud runtime was not measured in Phase 0. The 25-minute per-run ceiling implies at most 21.67 compute hours for 52 serial runs, plus rate-limit backoff; the prompt schedules cloud work across about two days.
-- Phase 2 Otsu check returned T_raw=-11.6113 dB and T=-11.6 dB, outside the prescribed [-22,-13] range. Flood areas, manifest and layer lock were not produced. Taluk counts and names are recorded below.
+- Historical pre-rebuild Phase 2 Otsu check returned T_raw=-11.6113 dB and T=-11.6 dB. The later Otsu/KI analysis and Kirito's approved valley choice supersede that initial stop; final Phase 2 acceptance is recorded below.
 
 ## Decisions made (with reason)
 - Git was already installed (2.51.0.windows.1); no winget installation was needed.
@@ -119,16 +119,20 @@ All runs used GISReActAgent on examples\urban-heat-madison, task "Compute the me
 - Threshold diagnostics after the post-hoc choice: T_otsu=-11.65 dB, T_ki=-12.55 dB, T_valley=-13.95 dB, chosen T=-14.0 dB; Otsu water fraction=15.2571% and water fraction at T=13.5636%. The KI range screen remains recorded as failed; the selected T comes from conventional half-up rounding of the valley. Flood area sensitivity at T±1 dB is recorded with flood stats and the manifest.
 - Hospital GeoJSON diagnosis before rebuild: the 860-row file's saved `geom_kind` values (captured from the source geometries before serialization) were 510 Point and 350 Polygon; OSM cache IDs classify these as 510 nodes and 350 ways, with 0 relations. After reading the file, 440 geometries were Points and 420 were null; the nulls break down to 230 node/Point and 190 way/Polygon rows, and 160 way/Polygon rows instead had Point geometry. Fetch/clip retained the source rows and hospitals do not pass through `to_crs`; the loss/misalignment occurs while constructing a new GeoDataFrame: property lists use a fresh RangeIndex while `geometry=raw.geometry` retained the sparse post-filter index. Resetting indices before assembly fixed the misalignment. The same audit found 6 `geom_kind` mismatches in schools and 90 null road rows in the initial outputs.
 - The corrected OSM rebuild passed read-after-write checks: hospitals.geojson has 860 features (510 Points, 350 Polygons), schools.geojson has 2,295 features (426 Points, 1,869 Polygons), and roads_major.gpkg has 6,075 LineStrings. All three have 0 null and 0 empty geometries; both facility files have 0 `geom_kind` mismatches. No fetched features required dropping for missing geometry. The source-element/geometry breakdown before saving, retrieval timestamp, and endpoint are recorded in `data/kerala/meta/cache/osm_retrieval.json`; the manifest writer includes geometry counts and retrieval metadata.
-- Historical initial Otsu and KI-gate runs stopped before polygonization. Kirito has now authorized the post-hoc valley selection; the hospital/vector geometry audit and rebuild must pass before flood outputs are generated.
+- Historical initial Otsu and KI-gate runs stopped before polygonization; the approved post-hoc valley choice and corrected OSM layers subsequently allowed flood outputs and the manifest to be completed.
+- Final flood: Ernakulam 57.662 km2, Alappuzha 279.019 km2, total 336.681 km2. Kuttanad flooded area is 171.847 km2, or 56.238% of its 339,526 in-AOI pixel centres.
+- Sensitivity: at T=-15 dB, water fraction 12.8966%, flood Ernakulam 51.252 km2 / Alappuzha 265.949 km2, Kuttanad 54.133%; at T=-14 dB, 13.5636%, 57.662 km2 / 279.019 km2, Kuttanad 56.238%; at T=-13 dB, 14.2289%, 64.388 km2 / 291.431 km2, Kuttanad 58.086%.
+- Quicklook is `data/kerala/meta/cache/quicklook.png`; flood mask is `data/kerala/meta/cache/flood_mask_20180821.tif`. The optional NASA export returned HTTP 404, so `nasa_compare.png` was not created; the attempt and skipped status are recorded in `data/kerala/meta/cache/nasa_crosscheck.json` and the manifest.
+- Final vector geometry counts: districts.gpkg 2 Polygon; taluks.gpkg 13 Polygon; hospitals.geojson 510 Point + 350 Polygon; schools.geojson 426 Point + 1,869 Polygon; roads_major.gpkg 6,075 LineString; flood_extent_20180821.gpkg 1 MultiPolygon. The VV, JRC and DEM rasters each contain 12,166,000 grid pixels in one band. All nine layer files are read-only, and the manifest records geometry counts and matching SHA-256 hashes.
 
 ## Phase 3 execution
 - Kirito directed continuation to Phase 3 while the Phase 2 threshold review remains pending. The Phase 3 pack keeps `water_threshold_vv_db` unresolved in YAML and resolves it only from an accepted manifest at load time; it rejects values outside the prescribed range. No threshold value was invented or substituted.
 - Schema-v1 pack YAML and `kerala.pack.pack` now provide schema checking, manifest binding, value-free parameter indexing, and per-run `domain_param` call logging.
 - `AnswerChecker` and `KeralaAgent` now enforce answer shape/unit/range rules, preserve numbered answer attempts, call GISclaw's built-in output guard, and append checker records without accessing pack values.
 - Prompt and task builders now reuse GISclaw's `SYSTEM_PROMPT`, skill and data blocks, add the value-free pack index only in the pack arm, keep parameter task sections arm-specific, and profile the dataset through the existing junction helper.
-- Phase 3 acceptance passed: 26 offline tests. Tests use a temporary manifest value inside the declared range; the production pack still requires the real Phase 2 manifest and rejects the currently observed out-of-range T.
+- Phase 3 acceptance passed: 26 offline tests. Tests use a temporary manifest value inside the declared range; with Phase 2 accepted, the production pack resolves T=-14.0 dB from the manifest.
 
-## Phase 2 stop output
+## Historical Phase 2 stop output (before the post-hoc valley choice)
 Command:
 `.\.venv\Scripts\python.exe -m kerala.prepare_data --stage flood`
 
@@ -137,6 +141,29 @@ Output:
 `Target grid EPSG:32643 2765 x 4400 = 12,166,000 pixels`
 `Otsu T_raw=-11.6113 dB; rounded T=-11.6 dB`
 `NEEDS KIRITO: rounded Otsu T=-11.6 dB is outside [-22, -13]`
+
+## Phase 2 acceptance
+Command:
+`.\.venv\Scripts\python.exe -m kerala.prepare_data --check`
+
+Last 15 output lines:
+```text
+Alappuzha: flood=279.019 km2; pixels=310,021
+Taluks: Kothamangalam, Muvattupuzha, Kunnathunad, Aluva, Paravur, Kanayannur, Kochi, Kuttanad, Chengannur, Mavelikkara, Karthikappally, Ambalappuzha, Cherthala
+Kuttanad flooded=56.238% (171.847 km2)
+districts.gpkg: 2 features; geometry types={'Polygon': 2}
+taluks.gpkg: 13 features; geometry types={'Polygon': 13}
+hospitals.geojson: 860 features; geometry types={'Point': 510, 'Polygon': 350}
+schools.geojson: 2,295 features; geometry types={'Polygon': 1869, 'Point': 426}
+roads_major.gpkg: 6,075 features; geometry types={'LineString': 6075}
+s1_vv_20180821_db.tif: 12,166,000 pixels; bands=1
+jrc_seasonality.tif: 12,166,000 pixels; bands=1
+dem_cop30.tif: 12,166,000 pixels; bands=1
+flood_extent_20180821.gpkg: 1 features; geometry types={'MultiPolygon': 1}
+Quicklook: D:\GISclaw\GISclaw-main\data\kerala\meta\cache\quicklook.png
+NASA cross-check: skipped; HTTPError: HTTP Error 404: Not Found
+Checked 9 layers and matching SHA-256 hashes
+```
 
 ## Phase 0 acceptance outputs (preserved)
 

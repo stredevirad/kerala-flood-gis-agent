@@ -1172,10 +1172,9 @@ def _reference_flood(vv, season, dem_full, inside, projected, transform, width, 
 def _nasa_crosscheck(transform, width: int, height: int) -> dict[str, Any]:
     output_path = CACHE / "nasa_compare.png"
     status_path = CACHE / "nasa_crosscheck.json"
-    if output_path.is_file() and status_path.is_file():
+    if status_path.is_file():
         existing = json.loads(status_path.read_text(encoding="utf-8"))
-        if existing.get("status") == "downloaded":
-            return existing
+        return existing
     xmin = float(transform.c)
     ymax = float(transform.f)
     xmax = xmin + width * PIXEL_SIZE
@@ -1470,7 +1469,8 @@ def prepare(stage: str = "full") -> None:
         stac_items = _stac_items(aoi)
         rtc_info = json.loads((CACHE / "rtc_units.json").read_text(encoding="utf-8"))
         flood_stats = json.loads((CACHE / "flood_stats.json").read_text(encoding="utf-8"))
-        flood_stats.setdefault("optional_nasa_crosscheck", _nasa_crosscheck(transform, width, height))
+        if "optional_nasa_crosscheck" not in flood_stats:
+            flood_stats["optional_nasa_crosscheck"] = _nasa_crosscheck(transform, width, height)
         _json_write(CACHE / "flood_stats.json", flood_stats)
         _write_manifest(aoi, taluks, stac_items, rtc_info, flood_stats)
         print("Manifest written", flush=True)
