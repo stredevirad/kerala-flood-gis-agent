@@ -1,5 +1,5 @@
 # PROGRESS
-## Status: Phase 0 — STOP: waiting for Kirito
+## Status: Phase 1 — in progress
 ## Checklist
 - [x] Phase 0
   - [x] 0.1 git init + .gitignore + upstream snapshot commit
@@ -12,8 +12,13 @@
   - [x] 0.8 set up Ollama and confirm 16K context
   - [x] 0.9 measure default and CPU-only timing
 - [ ] Phase 1 — F1–F5 and regression tests
-  - [ ] Implement F1–F5
-  - [ ] Run targeted and full baseline tests
+  - [x] F1 polygon count left-join regression
+  - [ ] F2 terrain operations reject geographic CRS
+  - [ ] F3 Windows UTF-8 file handling
+  - [ ] F4 conversation trim respects context budget
+  - [ ] F5 OpenAI retries, zero temperature and optional seed
+  - [ ] Run targeted fixes tests
+  - [ ] Run full baseline suite and compare with Phase 0
 - [ ] Phase 2 — data preparation
   - [ ] Area of interest and district boundaries
   - [ ] Taluk boundaries and verification

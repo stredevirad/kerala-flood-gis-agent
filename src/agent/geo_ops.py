@@ -196,7 +196,8 @@ def _b_count_in_polygon(inp, p, out, save_as):
     return _PRELUDE + (
         f"_pts = {pts}.to_crs({poly}.crs) if ({poly}.crs is not None and {pts}.crs is not None and {poly}.crs != {pts}.crs) else {pts}\n"
         f"_j = _gpd.sjoin({poly}, _pts, predicate='contains', how='left')\n"
-        f"_cnt = _j.groupby(_j.index).size()\n"
+        f"_right_index_col = next(_c for _c in _j.columns if _c.startswith('index_right'))\n"
+        f"_cnt = _j.groupby(level=0)[_right_index_col].count()\n"
         f"{out} = {poly}.copy(); {out}[{_pv(field)}] = {out}.index.map(_cnt).fillna(0).astype(int)\n"
     ) + _vector_tail(out, save_as)
 
