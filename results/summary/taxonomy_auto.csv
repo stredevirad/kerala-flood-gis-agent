@@ -1,0 +1,7 @@
+batch,model,qid,arm,taxonomy_auto,manual_label
+phase5_local_floor,local-qwen7b,P01,inline,FORMAT,
+phase5_local_floor,local-qwen7b,P01,noparam,FORMAT,
+phase5_local_floor,local-qwen7b,P01,pack,FORMAT,
+phase5_local_floor,local-qwen7b,P06,inline,FORMAT,
+phase5_local_floor,local-qwen7b,P06,noparam,FORMAT,
+phase5_local_floor,local-qwen7b,P06,pack,FORMAT,

@@ -1,5 +1,5 @@
 # PROGRESS
-## Status: Phase 4 frozen after Kirito approval; Phase 5 in progress
+## Status: Phase 5 STOP gate reached: local floor check failed (0/6); no matrix started
 ## Checklist
 - [x] Phase 0
   - [x] 0.1 git init + .gitignore + upstream snapshot commit
@@ -39,13 +39,13 @@
   - [x] GOLD_REVIEW.md
   - [x] Gold acceptance and review STOP
   - [x] Freeze after "gold approved"
-- [ ] Phase 5 — runner, scorer, demo, smoke tests (STOP gate)
-  - [ ] run_one and run_bench
-  - [ ] Scorer, tables, taxonomy, figures
-  - [ ] Demo CLI
-  - [ ] Offline harness tests
-  - [ ] Approved smoke runs only
-  - [ ] Smoke acceptance and matrix STOP
+- [x] Phase 5 — runner, scorer, demo, smoke tests (STOP gate)
+  - [x] run_one and run_bench
+  - [x] Scorer, tables, taxonomy, figures
+  - [x] Demo CLI
+  - [x] Offline harness tests
+  - [x] Approved smoke runs only
+  - [x] Smoke acceptance and matrix STOP (floor rule failed; matrix prohibited)
 - [ ] Phase 6 — score, analyse, write
   - [ ] Score matrix and inspect at least 10 failed traces
   - [ ] Draft REPORT.md
@@ -100,6 +100,7 @@ All runs used GISReActAgent on examples\urban-heat-madison, task "Compute the me
 
 ## Needs Kirito
 - Gold was approved and frozen. Do not edit `questions.yaml`, `rubric.yaml`, `gold.json`, `kerala_pack.yaml`, or the top-level `data/kerala/layers/` files; the frozen test guards their approved hashes and layer listing.
+- Phase 5 floor check failed 0/6. Approve a revised, smaller/easier floor set before any further model run; the Phase 5 prompt prohibits the matrix until this is resolved.
 - Kirito explicitly resumed the work by directing Phase 1 after the Phase 0 STOP gate. The smoke task failures remain documented: Vulkan reached the 12-round limit; CPU stopped on repeated-code detection. The projected local matrix is below 20 hours, so no cut is required by the prompt.
 - The initial pre-rebuild Otsu stop and later KI-gate STOP are superseded by Kirito's post-hoc valley decision recorded under Decisions made. No plausible range or rubric range changed.
 - Pre-rebuild Phase 2 threshold diagnosis (historical; superseded by the approved rerun below):
@@ -142,7 +143,7 @@ All runs used GISReActAgent on examples\urban-heat-madison, task "Compute the me
 - The revised facility definition adds `facility_flood_buffer_m=250` m to the pack and rubric. P01, P02, P11, and P12 use point/centroid-to-flood distance or polygon-to-flood distance for `intersects`; their default gold values are 93, 226, 68, and 215 respectively.
 - The complete deterministic answer table is in `kerala/bench/gold.json` and `kerala/bench/GOLD_REVIEW.md`. P06 is exactly 64,000 pixels or 57.600000 km2; the review records the 69-pixel, AOI-edge slope difference from Phase 2's full-DEM calculation. P07=56.236341% and C01=1,417.757234 km2; all 23 results have status/unit validation and a documented sanity statement.
 - `kerala/bench/gold_sensitivity.json` records P05/P06 at -15/-14/-13 dB, P03 at 1/3/5 km, P09 at 5/10/15 m, and P01/P02/P11/P12 at 100/250/500 m flood buffers. The review also contains the requested hospital/school buffer counts for Alappuzha, Ernakulam, and Kuttanad. The P01 hand-check map is `data/kerala/meta/cache/gold_P01.png`.
-- The Phase 4 artifacts are deliberately not frozen. No `frozen.json` or `test_kerala_frozen.py` has been created.
+- The Phase 4 artifacts were later frozen after Kirito's explicit approval. `kerala/bench/frozen.json` and `tests/test_kerala_frozen.py` are committed in `3b39507 phase 4: frozen`.
 
 ## Phase 4 acceptance
 Command:
@@ -296,3 +297,22 @@ Phase 3 acceptance command:
 Last output:
 ...........................                                              [100%]
 27 passed in 1.20s
+
+## Phase 5 execution and STOP gate
+
+- Implemented and committed the isolated runner (`run_one.py`, `run_bench.py`), scorer, demo CLI, model registry, offline harness, and frozen-layer guard. Each real run used `data/kerala/layers` only; the manifest, pack, cache and gold files remained outside its dataset work directory.
+- The local development smoke was `D01,D02,D03 × pack × local-qwen7b` in batch `phase5_local_dev`: all three were format failures. D01 and D03 finished without `answer.json`; D02 ended `paused_quota` after eight calls. Their mean observed duration was 3.92 min/run. The agent repeatedly listed the visible data but attempted vector loads without the required `dataset/` path, then repeated `list_files`.
+- The approved local floor batch `P01,P06 × noparam,inline,pack` completed in `phase5_local_floor`. All six runs finished, were `FORMAT` failures (no answer file), and scored 0/6 `correct_final` and 0/6 `correct_given_own_params`. Individual wall minutes: P01/noparam 6.5690, P01/inline 3.9036, P01/pack 3.8802; P06/noparam 4.0450, P06/inline 3.3096, P06/pack 3.1352. Mean: 4.14 min/run.
+- Maximum per-call prompt-token count was 5,645 (D02), below the 14,500 limit. The floor batch maximum was 5,577. `results/summary/` holds the floor CSVs, tables and figures. Run artifacts remain git-ignored under `results/runs/`.
+- The approved cloud D01 pack smoke was not run: `kerala/.env`/`GEMINI_API_KEY` is absent. No credential was invented or external cloud request attempted.
+- The first local floor launch produced zero-call `PermissionError: [WinError 5] Access is denied` entries because the restricted shell could not create the Windows dataset junction. The authorized external runner retried those `error` entries, created the temporary junctions and produced the six completed run artifacts above. The same limitation affected the in-sandbox test invocation; the required acceptance command passed in the external runner.
+- Per the Phase 5 rule, fewer than two successful floor cells requires STOP. Do not run the matrix. A smaller/easier proposed replacement floor set is D01, D03 plus one simple parameter question whose prompt explicitly demonstrates the required `dataset/<layer>` path; it must be approved before any additional model run.
+
+Phase 5 acceptance command:
+`.\.venv\Scripts\python.exe -m pytest -q tests\test_kerala_harness.py tests\test_kerala_frozen.py`
+
+Last output:
+```text
+.......                                                                  [100%]
+7 passed in 1.65s
+```

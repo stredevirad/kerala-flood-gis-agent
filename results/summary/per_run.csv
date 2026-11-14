@@ -1,0 +1,7 @@
+batch,model,qid,arm,expected_status,format_ok,correct_final,correct_first_attempt,checker_rejections,pack_calls,params_reported,params_in_code,geographic_measure_flag,assumption_stated,assumption_defensible,correct_given_own_params,minutes,tokens,exit_reason,backoff_seconds,wall_seconds,answer_status,checker_text,taxonomy_auto
+phase5_local_floor,local-qwen7b,P01,inline,ok,False,False,False,0,0,{},False,False,False,False,False,3.9036,33173,finished,0.0,234.218,,,FORMAT
+phase5_local_floor,local-qwen7b,P01,noparam,ok,False,False,False,0,0,{},False,False,False,False,False,6.569,34058,finished,0.0,394.141,,,FORMAT
+phase5_local_floor,local-qwen7b,P01,pack,ok,False,False,False,0,0,{},False,False,False,False,False,3.8802,33267,finished,0.0,232.813,,,FORMAT
+phase5_local_floor,local-qwen7b,P06,inline,ok,False,False,False,0,0,{},False,False,False,False,False,3.3096,33239,finished,0.0,198.578,,,FORMAT
+phase5_local_floor,local-qwen7b,P06,noparam,ok,False,False,False,0,0,{},False,False,False,False,False,4.045,33636,finished,0.0,242.703,,,FORMAT
+phase5_local_floor,local-qwen7b,P06,pack,ok,False,False,False,0,0,{},False,False,False,False,False,3.1352,33421,finished,0.0,188.109,,,FORMAT
