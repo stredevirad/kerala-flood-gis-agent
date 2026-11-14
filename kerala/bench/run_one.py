@@ -133,9 +133,21 @@ def run_one(qid: str, arm: str, model: str, out: Path, *, stub_mode: str = "ok")
     events: list[dict[str, Any]] = []
     result = None
     caught = ""
+    max_prompt_tokens = 0
     try:
         if not engine.load_model():
             raise RuntimeError("model initialization failed")
+        original_generate = engine.generate
+
+        def measured_generate(*args: Any, **kwargs: Any) -> dict[str, Any]:
+            nonlocal max_prompt_tokens
+            before = engine.get_stats().get("prompt_tokens", 0)
+            response = original_generate(*args, **kwargs)
+            after = engine.get_stats().get("prompt_tokens", 0)
+            max_prompt_tokens = max(max_prompt_tokens, int(after) - int(before))
+            return response
+
+        engine.generate = measured_generate
         area_km2 = 4337.752  # externally supplied runtime guard, never included in the agent dataset/prompt
         agent = KeralaAgent(
             engine, question=question, arm=arm, data_text=build_data_text(), area_of_interest_km2=area_km2,
@@ -166,7 +178,7 @@ def run_one(qid: str, arm: str, model: str, out: Path, *, stub_mode: str = "ok")
         "model_digest": _ollama_digest(config) if config.get("provider") == "ollama" else config.get("model"),
         "arm": arm, "qid": qid, "rounds": getattr(result, "total_rounds", 0),
         "llm_calls": stats.get("total_calls", 0), "prompt_tokens": stats.get("prompt_tokens", 0),
-        "completion_tokens": stats.get("total_output_tokens", 0), "max_prompt_tokens": stats.get("prompt_tokens", 0),
+        "completion_tokens": stats.get("total_output_tokens", 0), "max_prompt_tokens": max_prompt_tokens,
         "wall_seconds": round(elapsed, 3), "backoff_seconds": float(getattr(engine, "backoff_seconds", 0.0)),
         "exit_reason": reason, "error": caught or None, "git_commit": _git_commit(),
         "pack_hash": _sha256(ROOT / "kerala" / "pack" / "kerala_pack.yaml"),
