@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """Phase 0 local timing run for the GISclaw urban-heat example."""
 import argparse
+import ctypes
 import json
 import os
 import time
@@ -10,6 +11,33 @@ from pathlib import Path
 
 from src.agent.llm_engine import OpenAIEngine
 from src.agent.react_agent import GISReActAgent
+
+
+def peak_working_set_mb():
+    """Return the process high-water working set on Windows."""
+    class PROCESS_MEMORY_COUNTERS(ctypes.Structure):
+        _fields_ = [
+            ("cb", ctypes.c_ulong),
+            ("PageFaultCount", ctypes.c_ulong),
+            ("PeakWorkingSetSize", ctypes.c_size_t),
+            ("WorkingSetSize", ctypes.c_size_t),
+            ("QuotaPeakPagedPoolUsage", ctypes.c_size_t),
+            ("QuotaPagedPoolUsage", ctypes.c_size_t),
+            ("QuotaPeakNonPagedPoolUsage", ctypes.c_size_t),
+            ("QuotaNonPagedPoolUsage", ctypes.c_size_t),
+            ("PagefileUsage", ctypes.c_size_t),
+            ("PeakPagefileUsage", ctypes.c_size_t),
+        ]
+
+    counters = PROCESS_MEMORY_COUNTERS()
+    counters.cb = ctypes.sizeof(counters)
+    process = ctypes.windll.kernel32.GetCurrentProcess()
+    ok = ctypes.windll.psapi.GetProcessMemoryInfo(
+        process, ctypes.byref(counters), counters.cb
+    )
+    if not ok:
+        raise ctypes.WinError()
+    return round(counters.PeakWorkingSetSize / (1024 * 1024), 1)
 
 
 def main():
@@ -64,9 +92,12 @@ def main():
         "success": result.success,
         "rounds": result.total_rounds,
         "wall_seconds": round(wall, 2),
+        "minutes_per_run": round(wall / 60, 2),
         "calls": stats["total_calls"],
+        "mean_seconds_per_call": round(wall / max(stats["total_calls"], 1), 2),
         "prompt_tokens": stats["prompt_tokens"],
         "completion_tokens": stats["total_output_tokens"],
+        "peak_working_set_mb": peak_working_set_mb(),
         "call_log": str(events_path),
     }
     (out / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
