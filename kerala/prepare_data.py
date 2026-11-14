@@ -9,6 +9,7 @@ import json
 import math
 import os
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -184,7 +185,22 @@ def _aoi_union(aoi: gpd.GeoDataFrame):
 
 
 def _feature_frame(polygon, tags: dict[str, Any]) -> gpd.GeoDataFrame:
-    return ox.features_from_polygon(polygon, tags=tags).reset_index()
+    # A bounding-box query is much cheaper for Overpass than serializing the
+    # districts' detailed coastlines into a poly query. Every caller filters
+    # the returned geometries against the exact AOI or representative-point rule.
+    bounds = polygon.bounds
+    bbox = (bounds[0], bounds[1], bounds[2], bounds[3])
+    for attempt in range(4):
+        try:
+            return ox.features_from_bbox(bbox=bbox, tags=tags).reset_index()
+        except Exception as exc:
+            message = str(exc).casefold()
+            transient = any(code in message for code in ("429", "502", "503", "504", "timeout", "temporarily"))
+            if not transient or attempt == 3:
+                raise
+            delay = 15 * (2**attempt)
+            print(f"Transient Overpass error; retrying in {delay}s ({attempt + 1}/3): {exc}", flush=True)
+            time.sleep(delay)
 
 
 def _prepare_taluks(aoi: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
