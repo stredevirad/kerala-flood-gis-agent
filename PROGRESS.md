@@ -1,5 +1,5 @@
 # PROGRESS
-## Status: Phase 1 — done
+## Status: Phase 2 — in progress
 ## Checklist
 - [x] Phase 0
   - [x] 0.1 git init + .gitignore + upstream snapshot commit
@@ -20,7 +20,7 @@
   - [x] Run targeted fixes tests
   - [x] Run full baseline suite and compare with Phase 0
 - [ ] Phase 2 — data preparation
-  - [ ] Area of interest and district boundaries
+  - [x] Area of interest and district boundaries
   - [ ] Taluk boundaries and verification
   - [ ] Target grid
   - [ ] Vector and raster layers
@@ -96,6 +96,10 @@ All runs used GISReActAgent on examples\urban-heat-madison, task "Compute the me
 ## Needs Kirito
 - Kirito explicitly resumed the work by directing Phase 1 after the Phase 0 STOP gate. The smoke task failures remain documented: Vulkan reached the 12-round limit; CPU stopped on repeated-code detection. The projected local matrix is below 20 hours, so no cut is required by the prompt.
 - No gold or benchmark design decisions are pending.
+
+## Phase 2 execution
+- Area of interest cached from `osmnx.geocode_to_gdf` for Ernakulam and Alappuzha on 2026-11-14. OSMnx's HTTP cache is under the ignored `data/kerala/meta/cache/` directory.
+- The resumable script was added in commit `1e01f80`; `python -m kerala.prepare_data --stage aoi` completed with `AOI cached` and `Area of interest ready`.
 
 ## Phase 0 acceptance outputs (preserved)
 
