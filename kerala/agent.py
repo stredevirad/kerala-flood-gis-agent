@@ -14,12 +14,7 @@ from app.runner import DATA_BLOCK, SKILLS_BLOCK, SYSTEM_PROMPT
 from app.skills_store import SkillsStore
 from src.agent.react_agent import GISReActAgent, _link_dataset
 
-from kerala.pack.pack import (
-    DOMAIN_PARAM_DESCRIPTION,
-    bind_domain_param,
-    index_text,
-    load_pack,
-)
+from kerala.pack.pack import DOMAIN_PARAM_DESCRIPTION, bind_domain_param, index_text, load_pack
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -29,10 +24,119 @@ ANSWER_FIELDS = (
     "question_id", "status", "value", "unit", "parameters_used", "assumptions", "method"
 )
 VALID_STATUSES = {"ok", "cannot_answer"}
+ANSWER_CONTRACT = '''Write `pred_results/answer.json` as a JSON object with exactly these fields:
+{
+  "question_id": {question_id},
+  "status": "ok" or "cannot_answer",
+  "value": a number, string, or null,
+  "unit": "count", "km2", "km", "percent", "m", "name", or null,
+  "parameters_used": {"parameter_key": value},
+  "assumptions": "one sentence",
+  "method": "one sentence"
+}
+If the data cannot support an answer, use status `cannot_answer`, set value and unit to null, and explain why in assumptions.'''
 
 
 def _question_id(question: Mapping[str, Any]) -> str:
     return str(question.get("id", question.get("question_id", "")))
+
+
+def build_data_text(
+    data_dir: str | Path = DEFAULT_LAYERS,
+    profile_root: str | Path = PROFILE_ROOT,
+) -> str:
+    """Profile the layer directory once and save the stable batch data block."""
+    source = Path(data_dir).resolve()
+    workspace = Path(profile_root).resolve()
+    workspace.mkdir(parents=True, exist_ok=True)
+    data_link = workspace / "data"
+    _link_dataset(str(source), str(data_link))
+    profile = data_profile.profile_project(str(workspace))
+    block = data_profile.build_block(profile)
+    (workspace / "data_block.txt").write_text(block, encoding="utf-8")
+    return block
+
+
+def build_system_prompt(
+    tool_descriptions: str,
+    arm: str,
+    needs_params,
+    data_text: str,
+    pack: Mapping[str, Any] | None = None,
+    skills_text: str | None = None,
+    profile_root: str | Path = PROFILE_ROOT,
+) -> str:
+    """Fill GISclaw's prompt template, adding the value-free pack index for A3."""
+    if arm not in {"noparam", "inline", "pack"}:
+        raise ValueError(f"Unknown benchmark arm: {arm}")
+    if skills_text is None:
+        store = SkillsStore(
+            workspace=str(profile_root),
+            builtin_dir=str(ROOT / "app" / "skills"),
+        )
+        skills_text = store.build_always_block()
+    prompt = SYSTEM_PROMPT.format(
+        tool_descriptions=tool_descriptions,
+        skill_rule="",
+        skills_block=SKILLS_BLOCK.format(skills=skills_text),
+        catalog_block="",
+        data_block=DATA_BLOCK.format(data=data_text),
+        memory_block="",
+        context_block="",
+    )
+    if arm == "pack":
+        params = list(needs_params or [])
+        section = "\n\n## Domain pack (Kerala 2018)\n"
+        if params:
+            section += index_text(params, pack=pack)
+        else:
+            section += "This question needs no pack parameters."
+        section += "\nCall domain_param(key) to get a value before you use it; cite the key in parameters_used."
+        prompt += section
+    return prompt
+
+
+def compose_task(
+    question: Mapping[str, Any],
+    arm: str,
+    pack: Mapping[str, Any] | None = None,
+) -> str:
+    """Compose the question, arm-specific parameter section, and shared contract."""
+    if arm not in {"noparam", "inline", "pack"}:
+        raise ValueError(f"Unknown benchmark arm: {arm}")
+    question_text = question.get("text", question.get("question"))
+    if not isinstance(question_text, str) or not question_text.strip():
+        raise ValueError("question must contain a non-empty text field")
+    question_id = _question_id(question)
+    needs_params = list(question.get("needs_params", []) or [])
+    parts = [question_text.strip()]
+    if needs_params:
+        section = "Parameters this question depends on: " + ", ".join(needs_params) + "."
+        if arm == "noparam":
+            section += (
+                " Choose a value for each, state it in `parameters_used` using exactly these key names."
+            )
+        elif arm == "inline":
+            if pack is None:
+                pack = load_pack()
+            values = []
+            for key in needs_params:
+                if key not in pack["parameters"]:
+                    raise KeyError(f"Missing inline parameter {key}")
+                entry = pack["parameters"][key]
+                if entry["value"] is None:
+                    raise ValueError(f"Inline parameter {key} is unresolved")
+                values.append(f"{key} = {entry['value']} {entry['unit']}")
+            section += " Use these values: " + "; ".join(values) + "."
+        else:
+            section += " Get their values with `domain_param`."
+        parts.append(section)
+    parts.append(
+        ANSWER_CONTRACT.replace(
+            "{question_id}", json.dumps(question_id, ensure_ascii=False)
+        )
+    )
+    return "\n\n".join(parts)
 
 
 class AnswerChecker:
@@ -164,12 +268,16 @@ class KeralaAgent(GISReActAgent):
 
     def run(self, instruction: str, data_dir: str, work_dir: str, on_step=None, should_stop=None):
         self._run_work_dir = Path(work_dir)
-        if self.arm == "pack":
-            if self.pack is None:
-                raise RuntimeError("pack arm requires a validated domain pack")
-            self.extra_tools["domain_param"] = (
-                bind_domain_param(self.pack, self._run_work_dir), DOMAIN_PARAM_DESCRIPTION
-            )
+        if self.arm == "pack" and self.pack is None:
+            raise RuntimeError("pack arm requires a validated domain pack")
+        self.extra_tools["domain_param"] = (
+            bind_domain_param(
+                self.pack,
+                self._run_work_dir,
+                allow_values=self.arm == "pack",
+            ),
+            DOMAIN_PARAM_DESCRIPTION,
+        )
         return super().run(
             instruction=instruction,
             data_dir=data_dir,

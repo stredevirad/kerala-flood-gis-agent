@@ -33,8 +33,8 @@ EXPECTED_KEYS = (
 )
 DOMAIN_PARAM_DESCRIPTION = (
     "\n\n8. domain_param(key)\n"
-    "   Retrieve one sourced parameter from the Kerala domain pack. "
-    "Use the exact parameter key; this tool records each call."
+    "   Request a sourced Kerala domain parameter using its exact key. "
+    "This tool records each call."
 )
 
 
@@ -153,6 +153,7 @@ def domain_param(
     *,
     pack: Mapping[str, Any] | None = None,
     work_dir: str | Path | None = None,
+    allow_values: bool = True,
 ) -> str:
     """Return a sourced parameter or the available key list, recording each call."""
     normalized = key.strip() if isinstance(key, str) else ""
@@ -162,6 +163,9 @@ def domain_param(
             if not normalized or normalized not in declared:
                 _append_call(work_dir, normalized, False)
                 return "Available domain parameter keys: " + ", ".join(declared)
+            if not allow_values:
+                _append_call(work_dir, normalized, False)
+                return "Domain parameter values are not available in this benchmark arm."
             current = load_pack()
         else:
             current = pack
@@ -169,6 +173,9 @@ def domain_param(
         if not normalized or normalized not in parameters:
             _append_call(work_dir, normalized, False)
             return "Available domain parameter keys: " + ", ".join(parameters)
+        if not allow_values:
+            _append_call(work_dir, normalized, False)
+            return "Domain parameter values are not available in this benchmark arm."
         _append_call(work_dir, normalized, True)
         entry = parameters[normalized]
         return json.dumps(
@@ -187,6 +194,11 @@ def domain_param(
         return f"Domain pack unavailable: {exc}"
 
 
-def bind_domain_param(pack: Mapping[str, Any], work_dir: str | Path):
+def bind_domain_param(
+    pack: Mapping[str, Any] | None,
+    work_dir: str | Path,
+    *,
+    allow_values: bool = True,
+):
     """Bind a validated pack and per-run call log path to the GISclaw tool."""
-    return partial(domain_param, pack=pack, work_dir=work_dir)
+    return partial(domain_param, pack=pack, work_dir=work_dir, allow_values=allow_values)
