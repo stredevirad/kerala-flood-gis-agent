@@ -6,6 +6,7 @@ import argparse
 import ctypes
 import json
 import os
+import threading
 import time
 from pathlib import Path
 
@@ -15,10 +16,12 @@ from src.agent.react_agent import GISReActAgent
 
 def peak_working_set_mb():
     """Return the process high-water working set on Windows."""
+    from ctypes import wintypes
+
     class PROCESS_MEMORY_COUNTERS(ctypes.Structure):
         _fields_ = [
-            ("cb", ctypes.c_ulong),
-            ("PageFaultCount", ctypes.c_ulong),
+            ("cb", wintypes.DWORD),
+            ("PageFaultCount", wintypes.DWORD),
             ("PeakWorkingSetSize", ctypes.c_size_t),
             ("WorkingSetSize", ctypes.c_size_t),
             ("QuotaPeakPagedPoolUsage", ctypes.c_size_t),
@@ -31,13 +34,52 @@ def peak_working_set_mb():
 
     counters = PROCESS_MEMORY_COUNTERS()
     counters.cb = ctypes.sizeof(counters)
-    process = ctypes.windll.kernel32.GetCurrentProcess()
-    ok = ctypes.windll.psapi.GetProcessMemoryInfo(
-        process, ctypes.byref(counters), counters.cb
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    psapi = ctypes.WinDLL("psapi", use_last_error=True)
+    get_current_process = kernel32.GetCurrentProcess
+    get_current_process.argtypes = []
+    get_current_process.restype = wintypes.HANDLE
+    get_process_memory_info = psapi.GetProcessMemoryInfo
+    get_process_memory_info.argtypes = [
+        wintypes.HANDLE,
+        ctypes.POINTER(PROCESS_MEMORY_COUNTERS),
+        wintypes.DWORD,
+    ]
+    get_process_memory_info.restype = wintypes.BOOL
+    ok = get_process_memory_info(
+        get_current_process(), ctypes.byref(counters), counters.cb
     )
     if not ok:
-        raise ctypes.WinError()
+        raise ctypes.WinError(ctypes.get_last_error())
     return round(counters.PeakWorkingSetSize / (1024 * 1024), 1)
+
+
+def system_memory_used_gb():
+    """Return current physical RAM use on Windows."""
+    from ctypes import wintypes
+
+    class MEMORYSTATUSEX(ctypes.Structure):
+        _fields_ = [
+            ("dwLength", wintypes.DWORD),
+            ("dwMemoryLoad", wintypes.DWORD),
+            ("ullTotalPhys", ctypes.c_ulonglong),
+            ("ullAvailPhys", ctypes.c_ulonglong),
+            ("ullTotalPageFile", ctypes.c_ulonglong),
+            ("ullAvailPageFile", ctypes.c_ulonglong),
+            ("ullTotalVirtual", ctypes.c_ulonglong),
+            ("ullAvailVirtual", ctypes.c_ulonglong),
+            ("ullAvailExtendedVirtual", ctypes.c_ulonglong),
+        ]
+
+    status = MEMORYSTATUSEX()
+    status.dwLength = ctypes.sizeof(status)
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    global_memory_status = kernel32.GlobalMemoryStatusEx
+    global_memory_status.argtypes = [ctypes.POINTER(MEMORYSTATUSEX)]
+    global_memory_status.restype = wintypes.BOOL
+    if not global_memory_status(ctypes.byref(status)):
+        raise ctypes.WinError(ctypes.get_last_error())
+    return (status.ullTotalPhys - status.ullAvailPhys) / (1024**3)
 
 
 def main():
@@ -76,13 +118,26 @@ def main():
             last.update(calls=calls, prompt=stats["prompt_tokens"],
                         completion=stats["total_output_tokens"])
 
+        peak_ram = [system_memory_used_gb()]
+        stop_sampler = threading.Event()
+
+        def sample_system_ram():
+            while not stop_sampler.wait(0.5):
+                peak_ram[0] = max(peak_ram[0], system_memory_used_gb())
+
+        sampler = threading.Thread(target=sample_system_ram, daemon=True)
+        sampler.start()
         start = time.perf_counter()
-        result = agent.run(
-            "Compute the mean temperature per block and save a choropleth PNG",
-            data_dir="examples/urban-heat-madison",
-            work_dir=str(out / "work"),
-            on_step=on_step,
-        )
+        try:
+            result = agent.run(
+                "Compute the mean temperature per block and save a choropleth PNG",
+                data_dir="examples/urban-heat-madison",
+                work_dir=str(out / "work"),
+                on_step=on_step,
+            )
+        finally:
+            stop_sampler.set()
+            sampler.join()
         wall = time.perf_counter() - start
 
     stats = engine.get_stats()
@@ -98,6 +153,7 @@ def main():
         "prompt_tokens": stats["prompt_tokens"],
         "completion_tokens": stats["total_output_tokens"],
         "peak_working_set_mb": peak_working_set_mb(),
+        "peak_system_ram_used_gb": round(peak_ram[0], 2),
         "call_log": str(events_path),
     }
     (out / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
