@@ -91,6 +91,7 @@ All runs used GISReActAgent on examples\urban-heat-madison, task "Compute the me
 - The model pull and Ollama access needed elevation for the user model directory. The agent timing run needed elevation for Windows junction creation.
 - Python timing output used PYTHONIOENCODING=utf-8 after GISclaw progress output failed under cp1252.
 - Whole-system RAM was sampled because the Ollama model runner shares the Intel Arc system memory; Python-process memory alone is not representative.
+- Kirito approved rebuilding only the Sentinel-1 VV mosaic with -32768, zero and non-finite source samples excluded before linear averaging. The threshold decision is now Kittler–Illingworth with a valley-agreement gate; Otsu remains diagnostic and is recorded but no longer selects T. The approved rule is T=round(T_ki,1) only when T_ki is within [-22,-13] and within 1.5 dB of T_valley; otherwise stop.
 - No Phase 0 acceptance item was skipped.
 
 ## Needs Kirito

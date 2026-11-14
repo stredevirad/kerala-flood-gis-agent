@@ -29,7 +29,7 @@ from rasterio.features import geometry_mask, shapes
 from rasterio.transform import from_origin, rowcol
 from rasterio.warp import Resampling, reproject, transform_bounds
 from rasterio.windows import Window, bounds as window_bounds, transform as window_transform
-from shapely.geometry import mapping, shape
+from shapely.geometry import Point, mapping, shape
 from shapely.ops import unary_union
 
 
@@ -45,6 +45,10 @@ NODATA_JRC = 255
 PIXEL_SIZE = 30
 MAX_PIXELS = 25_000_000
 TILE = 512
+VV_HIST_MIN_DB = -30.0
+VV_HIST_MAX_DB = 5.0
+VV_HIST_BIN_WIDTH_DB = 0.1
+VV_HIST_BIN_COUNT = int(round((VV_HIST_MAX_DB - VV_HIST_MIN_DB) / VV_HIST_BIN_WIDTH_DB))
 DISTRICTS = ("Ernakulam", "Alappuzha")
 OVERPASS_ENDPOINTS = (
     "https://overpass-api.de/api",
@@ -460,7 +464,7 @@ def _read_reproject(src, dst_window: Window, dst_transform, resampling, convert_
     valid = src.read_masks(1, window=src_window) > 0
     if src.nodata is not None:
         valid &= raw != src.nodata
-    valid &= np.isfinite(raw)
+    valid &= np.isfinite(raw) & (raw != SOURCE_NODATA_S1) & (raw != 0)
     raw[~valid] = np.nan
     if convert_db:
         raw[valid] = np.power(10.0, raw[valid] / 10.0, dtype="float32")
@@ -485,9 +489,18 @@ def _windows(width: int, height: int):
             yield Window(col, row, min(TILE, width - col), min(TILE, height - row))
 
 
-def _prepare_s1(s1_items, aoi, transform, width, height, inside) -> tuple[np.ndarray, dict[str, Any]]:
+def _prepare_s1(
+    s1_items,
+    aoi,
+    transform,
+    width,
+    height,
+    inside,
+    *,
+    force: bool = False,
+) -> tuple[np.ndarray, dict[str, Any]]:
     path = LAYERS / "s1_vv_20180821_db.tif"
-    if path.exists():
+    if path.exists() and not force:
         with rasterio.open(path) as src:
             values = src.read(1)
         saved_units = CACHE / "rtc_units.json"
@@ -497,7 +510,13 @@ def _prepare_s1(s1_items, aoi, transform, width, height, inside) -> tuple[np.nda
         info = {"units": units, "sample_percentiles": sample_stats}
         _json_write(saved_units, info)
         return values, info
-    units, sample_stats = _sample_rtc_units(s1_items[0], aoi)
+    saved_units = CACHE / "rtc_units.json"
+    if force and saved_units.exists():
+        info = json.loads(saved_units.read_text(encoding="utf-8"))
+        units = str(info["units"])
+        sample_stats = info["sample_percentiles"]
+    else:
+        units, sample_stats = _sample_rtc_units(s1_items[0], aoi)
     print(f"RTC units verified: {units}; sample p05/p50/p95={sample_stats}", flush=True)
     total = np.zeros((height, width), dtype="float32")
     count = np.zeros((height, width), dtype="uint8")
@@ -527,7 +546,8 @@ def _prepare_s1(s1_items, aoi, transform, width, height, inside) -> tuple[np.nda
     average[~inside] = np.nan
     _write_raster(path, average, transform, "float32", np.nan)
     info = {"units": units, "sample_percentiles": sample_stats}
-    _json_write(CACHE / "rtc_units.json", info)
+    if not (force and saved_units.exists()):
+        _json_write(saved_units, info)
     return average, info
 
 
@@ -680,17 +700,225 @@ def _prepare_vector_layers(aoi, aoi_projected):
 
 
 def _otsu_threshold(values: np.ndarray) -> float:
-    hist, edges = np.histogram(values, bins=256, range=(-30.0, 5.0))
-    centers = (edges[:-1] + edges[1:]) / 2.0
-    weights = hist.astype("float64") / max(1, hist.sum())
+    hist, edges = np.histogram(
+        values,
+        bins=VV_HIST_BIN_COUNT,
+        range=(VV_HIST_MIN_DB, VV_HIST_MAX_DB),
+    )
+    return _otsu_from_hist(hist, (edges[:-1] + edges[1:]) / 2.0)
+
+
+def _otsu_from_hist(hist: np.ndarray, centers: np.ndarray) -> float:
+    total = int(hist.sum())
+    if total == 0:
+        raise ValueError("Otsu needs at least one in-range histogram pixel")
+    weights = hist.astype("float64") / total
     omega = np.cumsum(weights)
     means = np.cumsum(weights * centers)
     total_mean = means[-1]
     denom = omega * (1.0 - omega)
-    variance = np.zeros_like(denom)
+    between = np.full_like(denom, -np.inf)
     valid = denom > 0
-    variance[valid] = (total_mean * omega[valid] - means[valid]) ** 2 / denom[valid]
-    return float(centers[int(np.argmax(variance))])
+    between[valid] = (total_mean * omega[valid] - means[valid]) ** 2 / denom[valid]
+    return float(centers[int(np.argmax(between))])
+
+
+def _kittler_illingworth(hist: np.ndarray, centers: np.ndarray) -> tuple[float, float]:
+    """Return the minimum-error threshold and its criterion value.
+
+    The histogram is split into two Gaussian classes. Minimize
+    1 + 2 sum(P_i log(sigma_i)) - 2 sum(P_i log(P_i)).
+    """
+    counts = hist.astype("float64")
+    total = float(counts.sum())
+    if total <= 0:
+        raise ValueError("Kittler-Illingworth needs histogram pixels")
+    p = counts / total
+    cumulative = np.cumsum(p)
+    first_moment = np.cumsum(p * centers)
+    second_moment = np.cumsum(p * centers * centers)
+    p_left = cumulative
+    p_right = 1.0 - p_left
+    safe_left = np.maximum(p_left, np.finfo("float64").tiny)
+    safe_right = np.maximum(p_right, np.finfo("float64").tiny)
+    mean_left = first_moment / safe_left
+    mean_total = first_moment[-1]
+    mean_right = (mean_total - first_moment) / safe_right
+    variance_left = second_moment / safe_left - mean_left * mean_left
+    variance_total = second_moment[-1]
+    variance_right = (variance_total - second_moment) / safe_right - mean_right * mean_right
+    valid = (p_left > 0) & (p_right > 0) & (variance_left > 0) & (variance_right > 0)
+    criterion = np.full_like(p_left, np.inf)
+    sigma_left = np.sqrt(np.maximum(variance_left, np.finfo("float64").tiny))
+    sigma_right = np.sqrt(np.maximum(variance_right, np.finfo("float64").tiny))
+    criterion[valid] = (
+        1.0
+        + 2.0 * (p_left[valid] * np.log(sigma_left[valid]) + p_right[valid] * np.log(sigma_right[valid]))
+        - 2.0 * (p_left[valid] * np.log(p_left[valid]) + p_right[valid] * np.log(p_right[valid]))
+    )
+    if not np.isfinite(criterion).any():
+        raise ValueError("Kittler-Illingworth found no valid two-class split")
+    index = int(np.argmin(criterion))
+    return float(centers[index]), float(criterion[index])
+
+
+def _threshold_diagnostics(
+    vv: np.ndarray,
+    season: np.ndarray,
+    inside: np.ndarray,
+    projected: gpd.GeoDataFrame,
+    transform,
+    width: int,
+    height: int,
+) -> dict[str, Any]:
+    edges = np.linspace(VV_HIST_MIN_DB, VV_HIST_MAX_DB, VV_HIST_BIN_COUNT + 1)
+    centers = (edges[:-1] + edges[1:]) / 2.0
+    valid = inside & np.isfinite(vv) & (vv >= VV_HIST_MIN_DB) & (vv <= VV_HIST_MAX_DB)
+    values = vv[valid]
+    if values.size == 0:
+        raise RuntimeError("No valid in-range VV pixels for threshold diagnosis")
+    hist, _ = np.histogram(values, bins=edges)
+    t_otsu = _otsu_from_hist(hist, centers)
+    t_ki, ki_criterion = _kittler_illingworth(hist, centers)
+
+    smoothed = np.convolve(hist.astype("float64"), np.ones(10, dtype="float64") / 10.0, mode="same")
+    water_mode_window = (centers >= -24.0) & (centers <= -14.0)
+    land_mode_window = (centers >= -10.0) & (centers <= -1.0)
+    if not water_mode_window.any() or not land_mode_window.any():
+        raise RuntimeError("Could not locate the expected water and land mode windows")
+    water_mode_index = int(np.flatnonzero(water_mode_window)[np.argmax(smoothed[water_mode_window])])
+    land_mode_index = int(np.flatnonzero(land_mode_window)[np.argmax(smoothed[land_mode_window])])
+    if water_mode_index >= land_mode_index:
+        raise RuntimeError("Water mode was not to the left of the land mode")
+    valley_index = water_mode_index + int(np.argmin(smoothed[water_mode_index : land_mode_index + 1]))
+    t_valley = float(centers[valley_index])
+    gate_passed = -22.0 <= t_ki <= -13.0 and abs(t_ki - t_valley) <= 1.5
+    threshold = round(t_ki, 1) if gate_passed else None
+
+    land_mask = geometry_mask(
+        [mapping(unary_union(projected.geometry.tolist()))],
+        out_shape=(height, width),
+        transform=transform,
+        invert=True,
+    )
+    sea_candidate = valid & ~land_mask
+    permanent = valid & (season >= 10) & (season != NODATA_JRC)
+    seasonal = valid & (season >= 1) & (season <= 9)
+    seasonality_zero = valid & (season == 0)
+
+    def sample_otsu(mask: np.ndarray) -> dict[str, Any] | None:
+        sample = vv[mask & valid]
+        if sample.size == 0:
+            return None
+        return {"pixels": int(sample.size), "T_otsu": _otsu_threshold(sample)}
+
+    alt_otsu = {
+        "AOI": {"pixels": int(values.size), "T_otsu": t_otsu},
+        "excluding_JRC_ge_10": sample_otsu(season < 10),
+        "JRC_ge_10": sample_otsu(season >= 10),
+        "JRC_1_9": sample_otsu((season >= 1) & (season <= 9)),
+        "JRC_0": sample_otsu(season == 0),
+    }
+    for _, row in projected.iterrows():
+        district_mask = geometry_mask(
+            [mapping(row.geometry)], out_shape=(height, width), transform=transform, invert=True
+        )
+        alt_otsu[str(row["name"])] = sample_otsu(district_mask)
+
+    otsu_water_fraction = float(np.count_nonzero(values <= t_otsu) / values.size)
+    water_fraction = (
+        float(np.count_nonzero(values <= threshold) / values.size) if threshold is not None else None
+    )
+
+    histogram_path = CACHE / "vv_histogram.png"
+    fig, ax = plt.subplots(figsize=(11, 6.5), constrained_layout=True)
+    curves = [
+        ("All AOI", valid, "#202a44"),
+        ("Sea/outside-land candidate", sea_candidate, "#888888"),
+        ("JRC seasonality ≥ 10", permanent, "#1f77b4"),
+        ("JRC seasonality 1–9", seasonal, "#e07a2d"),
+        ("JRC seasonality 0", seasonality_zero, "#32835a"),
+    ]
+    for label, mask, color in curves:
+        sample = vv[mask]
+        if sample.size:
+            density, _ = np.histogram(sample, bins=edges, density=True)
+            ax.stairs(density, edges, color=color, linewidth=2 if label == "All AOI" else 1.6,
+                      label=f"{label} (n={sample.size:,})")
+        elif label == "Sea/outside-land candidate":
+            ax.plot([], [], color=color, linewidth=1.6, label=f"{label}: no AOI pixels")
+    ax.set(title="Sentinel-1 VV dB by JRC seasonality", xlabel="VV backscatter (dB)", ylabel="Probability density")
+    ax.set_xlim(VV_HIST_MIN_DB, VV_HIST_MAX_DB)
+    ax.grid(alpha=0.22)
+    ax.legend(fontsize=9, loc="upper left")
+    ax.text(0.99, 0.02, "350 bins at 0.1 dB; non-finite/out-of-range pixels excluded",
+            transform=ax.transAxes, ha="right", va="bottom", fontsize=8,
+            bbox={"facecolor": "white", "alpha": 0.8, "edgecolor": "none"})
+    histogram_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(histogram_path, dpi=170)
+    plt.close(fig)
+
+    threshold_plot_path = CACHE / "vv_histogram_thresholds.png"
+    fig, ax = plt.subplots(figsize=(11, 6.5), constrained_layout=True)
+    ax.stairs(hist, edges, color="#202a44", linewidth=1.5, label="AOI pixel count")
+    ax.axvline(t_otsu, color="#d62728", linestyle=":", linewidth=2, label=f"T_otsu={t_otsu:.2f} dB")
+    ax.axvline(t_ki, color="#1f77b4", linestyle="--", linewidth=2, label=f"T_ki={t_ki:.2f} dB")
+    ax.axvline(t_valley, color="#2ca02c", linestyle="-.", linewidth=2, label=f"T_valley={t_valley:.2f} dB")
+    ax.set(title="AOI VV histogram with threshold candidates", xlabel="VV backscatter (dB)", ylabel="Pixel count")
+    ax.set_xlim(VV_HIST_MIN_DB, VV_HIST_MAX_DB)
+    ax.grid(alpha=0.22)
+    ax.legend(loc="upper left")
+    fig.savefig(threshold_plot_path, dpi=170)
+    plt.close(fig)
+
+    spot_specs = {
+        "Vembanad Lake centre": (76.390, 9.600),
+        "Central Kochi/MG Road": (76.285, 9.970),
+        "Kuttanad paddy near Nedumudi": (76.370, 9.430),
+    }
+    spots = {}
+    for label, (longitude, latitude) in spot_specs.items():
+        point = gpd.GeoSeries([Point(longitude, latitude)], crs="EPSG:4326").to_crs(TARGET_CRS).iloc[0]
+        spot_mask = geometry_mask([point.buffer(500)], out_shape=(height, width), transform=transform, invert=True)
+        spot_values = vv[valid & spot_mask]
+        spots[label] = {
+            "longitude": longitude,
+            "latitude": latitude,
+            "radius_m": 500,
+            "pixels": int(spot_values.size),
+            "median_vv_db": float(np.median(spot_values)) if spot_values.size else None,
+        }
+
+    result = {
+        "histogram": {"bins": VV_HIST_BIN_COUNT, "bin_width_db": VV_HIST_BIN_WIDTH_DB,
+                      "min_db": VV_HIST_MIN_DB, "max_db": VV_HIST_MAX_DB},
+        "valid_pixels": int(values.size),
+        "T_otsu": t_otsu,
+        "T_ki": t_ki,
+        "T_valley": t_valley,
+        "T": threshold,
+        "ki_criterion": ki_criterion,
+        "water_mode_db": float(centers[water_mode_index]),
+        "land_mode_db": float(centers[land_mode_index]),
+        "gate_passed": bool(gate_passed),
+        "otsu_water_pixel_fraction": otsu_water_fraction,
+        "water_pixel_fraction": water_fraction,
+        "otsu_alternatives": alt_otsu,
+        "sea_candidate_pixels": int(sea_candidate.sum()),
+        "spot_medians": spots,
+        "histogram_path": str(histogram_path.relative_to(ROOT)),
+        "threshold_plot_path": str(threshold_plot_path.relative_to(ROOT)),
+    }
+    _json_write(CACHE / "threshold_diagnostics.json", result)
+    print(f"Threshold histogram: {values.size:,} pixels; {VV_HIST_BIN_COUNT} bins at {VV_HIST_BIN_WIDTH_DB:.1f} dB", flush=True)
+    print(f"T_otsu={t_otsu:.4f} dB; T_ki={t_ki:.4f} dB; T_valley={t_valley:.4f} dB; T={threshold}", flush=True)
+    print(f"KI/valley gate={'PASS' if gate_passed else 'STOP'}; Otsu water fraction={otsu_water_fraction:.6%}; water fraction at T={water_fraction}", flush=True)
+    for name, sample in alt_otsu.items():
+        if sample is not None:
+            print(f"Otsu {name}: T={sample['T_otsu']:.4f} dB; pixels={sample['pixels']:,}", flush=True)
+    for name, entry in spots.items():
+        print(f"Spot {name}: median={entry['median_vv_db']} dB; pixels={entry['pixels']:,}", flush=True)
+    return result
 
 
 def _reference_flood(vv, season, dem_full, inside, projected, transform, width, height):
@@ -698,12 +926,21 @@ def _reference_flood(vv, season, dem_full, inside, projected, transform, width, 
     manifest_path = META / "data_manifest.json"
     if path.exists() and manifest_path.exists():
         return gpd.read_file(path), None, None
+    thresholds = _threshold_diagnostics(vv, season, inside, projected, transform, width, height)
+    if not thresholds["gate_passed"]:
+        raise RuntimeError(
+            "NEEDS KIRITO: KI/valley threshold gate failed: "
+            f"T_otsu={thresholds['T_otsu']:.4f}, T_ki={thresholds['T_ki']:.4f}, "
+            f"T_valley={thresholds['T_valley']:.4f}; no flood outputs were written"
+        )
     valid_vv = inside & np.isfinite(vv)
-    threshold_raw = _otsu_threshold(vv[valid_vv])
-    threshold = round(threshold_raw, 1)
-    print(f"Otsu T_raw={threshold_raw:.4f} dB; rounded T={threshold:.1f} dB", flush=True)
-    if not -22 <= threshold <= -13:
-        raise RuntimeError(f"NEEDS KIRITO: rounded Otsu T={threshold:.1f} dB is outside [-22, -13]")
+    threshold_raw = float(thresholds["T_otsu"])
+    threshold = float(thresholds["T"])
+    print(
+        f"T_otsu={threshold_raw:.4f} dB; T_ki={thresholds['T_ki']:.4f} dB; "
+        f"T_valley={thresholds['T_valley']:.4f} dB; chosen T={threshold:.1f} dB",
+        flush=True,
+    )
     water = valid_vv & (vv <= threshold)
     permanent = inside & (season != NODATA_JRC) & (season >= 10)
     valid_dem = inside & np.isfinite(dem_full)
@@ -714,16 +951,19 @@ def _reference_flood(vv, season, dem_full, inside, projected, transform, width, 
     steep = inside & valid_dem & (slope > 5.0)
     flood = water & ~permanent & ~steep & inside
     cache_mask = CACHE / "flood_mask_20180821.tif"
-    _write_raster(cache_mask, flood.astype("uint8"), transform, "uint8", 255)
+    mask_values = np.full((height, width), 255, dtype="uint8")
+    mask_values[inside] = 0
+    mask_values[flood] = 1
+    _write_raster(cache_mask, mask_values, transform, "uint8", 255)
 
     geometries = [shape(geom) for geom, value in shapes(
         flood.astype("uint8"), mask=flood, transform=transform, connectivity=8
     ) if value == 1]
     dissolved = unary_union(geometries) if geometries else None
     if dissolved is None or dissolved.is_empty:
-        raise RuntimeError("NEEDS KIRITO: Otsu reference flood is empty")
+        raise RuntimeError("NEEDS KIRITO: KI reference flood is empty")
     flood_gdf = gpd.GeoDataFrame(
-        {"source": [f"S1A 2018-08-21 VV Otsu T={threshold:.1f}"]},
+        {"source": [f"S1A 2018-08-21 VV Kittler-Illingworth T={threshold:.1f}"]},
         geometry=[dissolved],
         crs=TARGET_CRS,
     )
@@ -763,14 +1003,20 @@ def _reference_flood(vv, season, dem_full, inside, projected, transform, width, 
     overlay[perm_view] = (0.0, 0.05, 0.35, 0.85)
     ax.imshow(overlay, interpolation="nearest", extent=extent)
     projected.boundary.plot(ax=ax, color="yellow", linewidth=0.8)
-    ax.set_title(f"VV dB with Otsu flood (blue), permanent water (navy), T={threshold:.1f} dB")
+    ax.set_title(f"VV dB with KI flood (blue), permanent water (navy), T={threshold:.1f} dB")
     ax.set_axis_off()
     quicklook.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(quicklook, dpi=160)
     plt.close(fig)
     result = {
         "T_raw": threshold_raw,
+        "T_otsu": threshold_raw,
+        "T_ki": thresholds["T_ki"],
+        "T_valley": thresholds["T_valley"],
         "T": threshold,
+        "threshold_diagnostics": thresholds,
+        "water_pixel_fraction": thresholds["water_pixel_fraction"],
+        "otsu_water_pixel_fraction": thresholds["otsu_water_pixel_fraction"],
         "pixels_by_district": per_district,
         "counts_total": counts,
         "total_km2": {key: value * PIXEL_SIZE * PIXEL_SIZE / 1_000_000 for key, value in counts.items()},
@@ -819,7 +1065,13 @@ def _write_manifest(aoi, taluks, stac_items, rtc_info, flood_stats):
         "stac_assets": all_assets,
         "rtc_units_found": rtc_info,
         "T_raw": flood_stats["T_raw"],
+        "T_otsu": flood_stats["T_otsu"],
+        "T_ki": flood_stats["T_ki"],
+        "T_valley": flood_stats["T_valley"],
         "T": flood_stats["T"],
+        "water_pixel_fraction": flood_stats["water_pixel_fraction"],
+        "otsu_water_pixel_fraction": flood_stats["otsu_water_pixel_fraction"],
+        "threshold_diagnostics": flood_stats["threshold_diagnostics"],
         "pixels_and_km2_by_district": flood_stats["pixels_by_district"],
         "pixels_and_km2_total": flood_stats["total_km2"],
         "feature_counts": feature_counts,
@@ -872,6 +1124,16 @@ def _check() -> None:
     threshold = float(manifest["T"])
     if not -22 <= threshold <= -13:
         raise RuntimeError(f"T={threshold} is outside [-22,-13]")
+    t_ki = float(manifest["T_ki"])
+    t_valley = float(manifest["T_valley"])
+    if not -22 <= t_ki <= -13 or abs(t_ki - t_valley) > 1.5 or round(t_ki, 1) != threshold:
+        raise RuntimeError(
+            f"Threshold decision is inconsistent: T_ki={t_ki}, T_valley={t_valley}, T={threshold}"
+        )
+    for fraction_name in ("water_pixel_fraction", "otsu_water_pixel_fraction"):
+        fraction = float(manifest[fraction_name])
+        if not 0.0 <= fraction <= 1.0:
+            raise RuntimeError(f"{fraction_name}={fraction} is outside [0,1]")
     flood_km2 = sum(
         district["flood"]["km2"] for district in manifest["pixels_and_km2_by_district"].values()
     )
@@ -884,7 +1146,11 @@ def _check() -> None:
     if actual_hashes != manifest.get("sha256"):
         raise RuntimeError("Layer SHA-256 hashes do not match data_manifest.json")
     print("Phase 2 data check passed")
-    print(f"T_raw={manifest['T_raw']:.4f} dB; T={threshold:.1f} dB")
+    print(
+        f"T_otsu={manifest['T_otsu']:.4f} dB; T_ki={t_ki:.4f} dB; "
+        f"T_valley={t_valley:.4f} dB; T={threshold:.1f} dB"
+    )
+    print(f"Water pixel fraction at T={manifest['water_pixel_fraction']:.6%}")
     print(f"Flood area={flood_km2:.3f} km2; AOI area={aoi_km2:.3f} km2")
     for name, entry in manifest["pixels_and_km2_by_district"].items():
         print(f"{name}: flood={entry['flood']['km2']:.3f} km2; pixels={entry['flood']['pixels']:,}")
@@ -909,12 +1175,20 @@ def prepare(stage: str = "full") -> None:
         return
     projected, transform, width, height, inside = _grid(aoi)
     print(f"Target grid EPSG:32643 {width} x {height} = {width * height:,} pixels", flush=True)
-    _json_write(CACHE / "grid.json", {
+    grid_info = {
         "crs": TARGET_CRS, "pixel_size_m": PIXEL_SIZE, "width": width, "height": height,
         "transform": list(transform),
-    })
+    }
+    grid_path = CACHE / "grid.json"
+    if not grid_path.exists() or json.loads(grid_path.read_text(encoding="utf-8")) != grid_info:
+        _json_write(grid_path, grid_info)
     if stage == "grid":
         print("Target grid cached", flush=True)
+        return
+    if stage == "vv":
+        s1_items = _stac_items(aoi)[0]
+        _prepare_s1(s1_items, aoi, transform, width, height, inside, force=True)
+        print("VV mosaic rebuilt with nodata, zero and non-finite source samples excluded", flush=True)
         return
     if stage == "vectors":
         _prepare_vector_layers(aoi, projected)
@@ -931,6 +1205,13 @@ def prepare(stage: str = "full") -> None:
             dem_items, "data", LAYERS / "dem_cop30.tif", transform, width, height, inside, "dem"
         )
         print("Raster layers ready", flush=True)
+        return
+    if stage == "diagnostics":
+        with rasterio.open(LAYERS / "s1_vv_20180821_db.tif") as src:
+            vv = src.read(1)
+        with rasterio.open(LAYERS / "jrc_seasonality.tif") as src:
+            season = src.read(1)
+        _threshold_diagnostics(vv, season, inside, projected, transform, width, height)
         return
     if stage == "flood":
         with rasterio.open(LAYERS / "s1_vv_20180821_db.tif") as src:
@@ -988,7 +1269,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--check", action="store_true", help="check prepared layers and manifest hashes")
     parser.add_argument(
         "--stage",
-        choices=["full", "aoi", "taluks", "grid", "vectors", "rasters", "flood", "manifest"],
+        choices=["full", "aoi", "taluks", "grid", "vectors", "rasters", "vv", "diagnostics", "flood", "manifest"],
         default="full",
         help="run one resumable preparation stage (default: full)",
     )
