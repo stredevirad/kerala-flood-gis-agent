@@ -45,7 +45,7 @@ def main():
     parser.add_argument("--label", required=True, help="for example vulkan or cpu")
     parser.add_argument("--base-url", default="http://localhost:11434/v1")
     parser.add_argument("--model", default="gisclaw-qwen7b-16k")
-    parser.add_argument("--out", default="results/phase0_timing")
+    parser.add_argument("--out", default="logs/phase0_timing")
     args = parser.parse_args()
 
     out = Path(args.out) / args.label
