@@ -263,23 +263,32 @@ def _terrain(kind):
     def _b(inp, p, out, save_as):
         raster = inp["raster"]; zf = p.get("z_factor", 1.0)
         base = _PRELUDE + (
-            f"_arr = {raster}.astype(float); _meta = dict({raster}_meta)\n"
-            f"_px = abs(_meta['transform'].a); _py = abs(_meta['transform'].e)\n"
-            f"_dy, _dx = _np.gradient(_arr * {_pv(zf)}, _py, _px)\n"
+            "import rasterio.crs as _rio_crs\n"
+            f"_meta = dict({raster}_meta)\n"
+            "if _meta.get('crs') is not None and _rio_crs.CRS.from_user_input(_meta['crs']).is_geographic:\n"
+            f"    print('❌ The DEM must be reprojected to a projected CRS before calculating {kind}.')\n"
+            "else:\n"
+            f"    _arr = {raster}.astype(float)\n"
+            f"    _px = abs(_meta['transform'].a); _py = abs(_meta['transform'].e)\n"
+            f"    _dy, _dx = _np.gradient(_arr * {_pv(zf)}, _py, _px)\n"
         )
         if kind == "slope":
-            base += f"{out} = _np.degrees(_np.arctan(_np.sqrt(_dx**2 + _dy**2))).astype('float32')\n"
+            base += f"    {out} = _np.degrees(_np.arctan(_np.sqrt(_dx**2 + _dy**2))).astype('float32')\n"
         elif kind == "aspect":
-            base += f"{out} = (_np.degrees(_np.arctan2(-_dx, _dy)) % 360).astype('float32')\n"
+            base += f"    {out} = (_np.degrees(_np.arctan2(-_dx, _dy)) % 360).astype('float32')\n"
         else:  # hillshade
             base += (
-                f"_az, _alt = _np.radians(315.0), _np.radians(45.0)\n"
-                f"_slope = _np.arctan(_np.sqrt(_dx**2 + _dy**2))\n"
-                f"_aspect = _np.arctan2(-_dx, _dy)\n"
-                f"{out} = (255*((_np.cos(_alt)*_np.cos(_slope)) + (_np.sin(_alt)*_np.sin(_slope)*_np.cos(_az-_aspect)))).clip(0,255).astype('float32')\n"
+                f"    _az, _alt = _np.radians(315.0), _np.radians(45.0)\n"
+                f"    _slope = _np.arctan(_np.sqrt(_dx**2 + _dy**2))\n"
+                f"    _aspect = _np.arctan2(-_dx, _dy)\n"
+                f"    {out} = (255*((_np.cos(_alt)*_np.cos(_slope)) + (_np.sin(_alt)*_np.sin(_slope)*_np.cos(_az-_aspect)))).clip(0,255).astype('float32')\n"
             )
-        base += f"{out}_meta = _meta\n"
-        return base + _raster_tail(out)
+        base += f"    {out}_meta = _meta\n"
+        tail = _raster_tail(out)
+        return base + "".join(
+            "    " + line if line.strip() else line
+            for line in tail.splitlines(keepends=True)
+        )
     return _b
 
 
