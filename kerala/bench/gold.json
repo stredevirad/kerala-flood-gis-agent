@@ -1,0 +1,160 @@
+{
+  "answers": {
+    "C01": {
+      "status": "ok",
+      "tied": [],
+      "unit": "km2",
+      "value": 1417.757234
+    },
+    "C02": {
+      "status": "ok",
+      "tied": [],
+      "unit": "km",
+      "value": 2058.921864
+    },
+    "C03": {
+      "status": "ok",
+      "tied": [
+        "Kuttanad"
+      ],
+      "unit": "name",
+      "value": "Kuttanad"
+    },
+    "C04": {
+      "status": "ok",
+      "tied": [],
+      "unit": "count",
+      "value": 543
+    },
+    "C05": {
+      "status": "ok",
+      "tied": [],
+      "unit": "m",
+      "value": 1.546613
+    },
+    "C06": {
+      "status": "ok",
+      "tied": [],
+      "unit": "km2",
+      "value": 57.604372
+    },
+    "C07": {
+      "status": "cannot_answer",
+      "tied": [],
+      "unit": null,
+      "value": null
+    },
+    "C08": {
+      "status": "cannot_answer",
+      "tied": [],
+      "unit": null,
+      "value": null
+    },
+    "D01": {
+      "status": "ok",
+      "tied": [],
+      "unit": "count",
+      "value": 860
+    },
+    "D02": {
+      "status": "ok",
+      "tied": [],
+      "unit": "km2",
+      "value": 2919.9947
+    },
+    "D03": {
+      "status": "ok",
+      "tied": [],
+      "unit": "km2",
+      "value": 278.86123
+    },
+    "P01": {
+      "status": "ok",
+      "tied": [],
+      "unit": "count",
+      "value": 2
+    },
+    "P02": {
+      "status": "ok",
+      "tied": [],
+      "unit": "count",
+      "value": 2
+    },
+    "P03": {
+      "status": "ok",
+      "tied": [],
+      "unit": "count",
+      "value": 8
+    },
+    "P04": {
+      "status": "ok",
+      "tied": [
+        "Kothamangalam"
+      ],
+      "unit": "name",
+      "value": "Kothamangalam"
+    },
+    "P05": {
+      "status": "ok",
+      "tied": [],
+      "unit": "km2",
+      "value": 402.5898
+    },
+    "P06": {
+      "status": "ok",
+      "tied": [],
+      "unit": "km2",
+      "value": 57.6
+    },
+    "P07": {
+      "status": "ok",
+      "tied": [],
+      "unit": "percent",
+      "value": 56.236341
+    },
+    "P08": {
+      "status": "ok",
+      "tied": [],
+      "unit": "km2",
+      "value": 278.8056
+    },
+    "P09": {
+      "status": "ok",
+      "tied": [],
+      "unit": "count",
+      "value": 407
+    },
+    "P10": {
+      "status": "ok",
+      "tied": [
+        "Kuttanad"
+      ],
+      "unit": "name",
+      "value": "Kuttanad"
+    },
+    "P11": {
+      "status": "ok",
+      "tied": [],
+      "unit": "count",
+      "value": 3
+    },
+    "P12": {
+      "status": "ok",
+      "tied": [],
+      "unit": "count",
+      "value": 2
+    }
+  },
+  "parameters": {
+    "facility_point_rule": "representative_point",
+    "flood_date": "2018-08-21",
+    "low_lying_max_elevation_m": 10.0,
+    "max_flood_slope_deg": 5.0,
+    "permanent_water_rule": 10,
+    "project_crs": "EPSG:32643",
+    "raster_area_rule": "pixel_count * 900 m2, pixel centre inside zone",
+    "relief_camp_hospital_access_m": 3000.0,
+    "water_threshold_vv_db": -14.0
+  },
+  "schema_version": 1
+}

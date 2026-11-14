@@ -1,5 +1,5 @@
 # PROGRESS
-## Status: Phase 2 acceptance passed; stopped before Phase 4
+## Status: Phase 4 gold-review STOP gate reached; awaiting explicit "gold approved"
 ## Checklist
 - [x] Phase 0
   - [x] 0.1 git init + .gitignore + upstream snapshot commit
@@ -34,10 +34,10 @@
   - [x] Prompt construction and task composition
   - [x] Offline tests
 - [ ] Phase 4 — questions, gold, review (STOP gate)
-  - [ ] Questions and rubric
-  - [ ] Independent gold and sensitivity results
-  - [ ] GOLD_REVIEW.md
-  - [ ] Gold acceptance and review STOP
+  - [x] Questions and rubric
+  - [x] Independent gold and sensitivity results
+  - [x] GOLD_REVIEW.md
+  - [x] Gold acceptance and review STOP
   - [ ] Freeze only after "gold approved"
 - [ ] Phase 5 — runner, scorer, demo, smoke tests (STOP gate)
   - [ ] run_one and run_bench
@@ -96,6 +96,7 @@ All runs used GISReActAgent on examples\urban-heat-madison, task "Compute the me
 - No Phase 0 acceptance item was skipped.
 
 ## Needs Kirito
+- Phase 4 STOP gate: `kerala/bench/GOLD_REVIEW.md` contains the full 23-question gold table, plain-language calculation steps, exact function-line references, and a passing sanity statement for each answer. Please read it, line-review `kerala/bench/gold.py`, and hand-check P01, P07, and C01. The acceptance command passed and neither `kerala/bench/frozen.json` nor `tests/test_kerala_frozen.py` exists. Reply exactly `gold approved` to authorize the freeze, or provide corrections; do not start Phase 5 yet.
 - Kirito explicitly resumed the work by directing Phase 1 after the Phase 0 STOP gate. The smoke task failures remain documented: Vulkan reached the 12-round limit; CPU stopped on repeated-code detection. The projected local matrix is below 20 hours, so no cut is required by the prompt.
 - The initial pre-rebuild Otsu stop and later KI-gate STOP are superseded by Kirito's post-hoc valley decision recorded under Decisions made. No plausible range or rubric range changed.
 - Pre-rebuild Phase 2 threshold diagnosis (historical; superseded by the approved rerun below):
@@ -131,6 +132,26 @@ All runs used GISReActAgent on examples\urban-heat-madison, task "Compute the me
 - `AnswerChecker` and `KeralaAgent` now enforce answer shape/unit/range rules, preserve numbered answer attempts, call GISclaw's built-in output guard, and append checker records without accessing pack values.
 - Prompt and task builders now reuse GISclaw's `SYSTEM_PROMPT`, skill and data blocks, add the value-free pack index only in the pack arm, keep parameter task sections arm-specific, and profile the dataset through the existing junction helper.
 - Phase 3 acceptance passed: 26 offline tests. Tests use a temporary manifest value inside the declared range; with Phase 2 accepted, the production pack resolves T=-14.0 dB from the manifest.
+
+## Phase 4 execution (gold-review STOP gate)
+- Created `kerala/bench/questions.yaml` with the exact 12 parameter, 8 control, and 3 development questions; created `rubric.yaml` with the instructed tolerances and defensible parameter ranges.
+- `kerala/bench/gold.py` is independent of `src.agent`, reads the nine agent-visible layers directly with GeoPandas, Shapely, Rasterio, and NumPy, and resolves the accepted `T=-14.0 dB` through the pack/manifest. P06 and P07 recompute the VV/JRC/DEM flood rule from the visible rasters rather than reuse a Phase 2 cache result.
+- The complete deterministic answer table is in `kerala/bench/gold.json` and `kerala/bench/GOLD_REVIEW.md`. Default results include P01=2, P07=56.236341%, C01=1,417.757234 km2, and all 23 results have status/unit validation and a documented sanity statement.
+- `kerala/bench/gold_sensitivity.json` records P05/P06 at -15/-14/-13 dB, P03 at 1/3/5 km, and P09 at 5/10/15 m. Direct defensible overrides were also exercised for all three facility rules and a non-default radar-parameter combination.
+- The Phase 4 artifacts are deliberately not frozen. No `frozen.json` or `test_kerala_frozen.py` has been created.
+
+## Phase 4 acceptance
+Command:
+`.\.venv\Scripts\python.exe -m kerala.bench.gold --check`
+
+Last 15 output lines:
+```text
+Gold check passed: 23 answers, 4 sensitivity groups
+P01: 2 count
+P07: 56.236341 percent
+C01: 1417.757234 km2
+Both independent recomputations matched; all sanity statements passed
+```
 
 ## Historical Phase 2 stop output (before the post-hoc valley choice)
 Command:

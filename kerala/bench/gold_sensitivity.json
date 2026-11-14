@@ -1,0 +1,96 @@
+{
+  "answers": {
+    "P03": {
+      "1 km": {
+        "status": "ok",
+        "tied": [],
+        "unit": "count",
+        "value": 347
+      },
+      "3 km": {
+        "status": "ok",
+        "tied": [],
+        "unit": "count",
+        "value": 8
+      },
+      "5 km": {
+        "status": "ok",
+        "tied": [],
+        "unit": "count",
+        "value": 0
+      }
+    },
+    "P05": {
+      "-13.0": {
+        "status": "ok",
+        "tied": [],
+        "unit": "km2",
+        "value": 417.8439
+      },
+      "-14.0": {
+        "status": "ok",
+        "tied": [],
+        "unit": "km2",
+        "value": 402.5898
+      },
+      "-15.0": {
+        "status": "ok",
+        "tied": [],
+        "unit": "km2",
+        "value": 386.9685
+      }
+    },
+    "P06": {
+      "-13.0": {
+        "status": "ok",
+        "tied": [],
+        "unit": "km2",
+        "value": 64.2897
+      },
+      "-14.0": {
+        "status": "ok",
+        "tied": [],
+        "unit": "km2",
+        "value": 57.6
+      },
+      "-15.0": {
+        "status": "ok",
+        "tied": [],
+        "unit": "km2",
+        "value": 51.2181
+      }
+    },
+    "P09": {
+      "10 m": {
+        "status": "ok",
+        "tied": [],
+        "unit": "count",
+        "value": 407
+      },
+      "15 m": {
+        "status": "ok",
+        "tied": [],
+        "unit": "count",
+        "value": 551
+      },
+      "5 m": {
+        "status": "ok",
+        "tied": [],
+        "unit": "count",
+        "value": 78
+      }
+    }
+  },
+  "parameters": {
+    "facility_point_rule": "representative_point",
+    "flood_date": "2018-08-21",
+    "low_lying_max_elevation_m": 10.0,
+    "max_flood_slope_deg": 5.0,
+    "permanent_water_rule": 10,
+    "project_crs": "EPSG:32643",
+    "raster_area_rule": "pixel_count * 900 m2, pixel centre inside zone",
+    "relief_camp_hospital_access_m": 3000.0,
+    "water_threshold_vv_db": -14.0
+  },
+  "schema_version": 1
+}
