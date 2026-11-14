@@ -1,5 +1,5 @@
 # PROGRESS
-## Status: Phase 1 — in progress
+## Status: Phase 1 — done
 ## Checklist
 - [x] Phase 0
   - [x] 0.1 git init + .gitignore + upstream snapshot commit
@@ -11,14 +11,14 @@
   - [x] 0.7 run baseline tests
   - [x] 0.8 set up Ollama and confirm 16K context
   - [x] 0.9 measure default and CPU-only timing
-- [ ] Phase 1 — F1–F5 and regression tests
+- [x] Phase 1 — F1–F5 and regression tests
   - [x] F1 polygon count left-join regression
   - [x] F2 terrain operations reject geographic CRS
   - [x] F3 Windows UTF-8 file handling
   - [x] F4 conversation trim respects context budget
   - [x] F5 OpenAI retries, zero temperature and optional seed
-  - [ ] Run targeted fixes tests
-  - [ ] Run full baseline suite and compare with Phase 0
+  - [x] Run targeted fixes tests
+  - [x] Run full baseline suite and compare with Phase 0
 - [ ] Phase 2 — data preparation
   - [ ] Area of interest and district boundaries
   - [ ] Taluk boundaries and verification
@@ -94,20 +94,22 @@ All runs used GISReActAgent on examples\urban-heat-madison, task "Compute the me
 - No Phase 0 acceptance item was skipped.
 
 ## Needs Kirito
-- Phase 0 is at its STOP gate. The smoke task failed to complete on both backends: Vulkan reached the 12-round limit; CPU stopped on repeated-code detection. Review whether to continue with the current planned benchmark after Phase 1–5 validation. The projected local matrix is below 20 hours, so no cut is required by the prompt.
+- Kirito explicitly resumed the work by directing Phase 1 after the Phase 0 STOP gate. The smoke task failures remain documented: Vulkan reached the 12-round limit; CPU stopped on repeated-code detection. The projected local matrix is below 20 hours, so no cut is required by the prompt.
 - No gold or benchmark design decisions are pending.
 
-## Last acceptance output
-Command: .\.venv\Scripts\python.exe -m pytest -q tests --ignore=tests\test_ui.py
-Last 15 lines:
-    E         - 0o600
-    E         + 0o666
+## Phase 0 acceptance outputs (preserved)
+
+Baseline command:
+.\.venv\Scripts\python.exe -m pytest -q tests --ignore=tests\test_ui.py
+Last 15 output lines:
+        - 0o600
+E         + 0o666
 
 tests\test_smoke.py:142: AssertionError
 ---------------------------- Captured stderr call -----------------------------
-2026-11-14 12:11:11,041 [INFO] stored API key for openai (sk-ab…1234)
------------------------------- Captured log call -----------------------------
-INFO     gisclaw:server.py:176 stored API key for openai (sk-ab…1234)
+2026-11-14 12:11:11,041 [INFO] stored API key for openai (sk-ab�1234)
+------------------------------ Captured log call ------------------------------
+INFO     gisclaw:server.py:176 stored API key for openai (sk-ab�1234)
 =========================== short test summary info ===========================
 FAILED tests/test_local.py::test_local_probe_add_test_run - assert (False is ...
 FAILED tests/test_smoke.py::test_run_to_completion - AssertionError: assert (...
@@ -116,18 +118,13 @@ FAILED tests/test_smoke.py::test_toolbox_is_recorded - assert (False)
 FAILED tests/test_smoke.py::test_settings_mask_keys - AssertionError: assert ...
 5 failed, 9 passed in 31.58s
 
-Context command:
+Context confirmation command:
 .\.venv\Scripts\python.exe -c "from app.local_models import loaded_context; print(loaded_context('http://localhost:11434/v1','gisclaw-qwen7b-16k:latest'))"
 Output: 16384
 
-Timing commands used:
-.\.venv\Scripts\python.exe -m kerala.tools.smoke_run --label vulkan_final --out logs/phase0_timing
-.\.venv\Scripts\python.exe -m kerala.tools.smoke_run --label cpu_calls --out logs/phase0_timing
-Both timing command summaries are in logs\phase0_timing\<mode>\summary.json; per-call records are in calls.jsonl.
-
 Vulkan timing command:
 .\.venv\Scripts\python.exe -m kerala.tools.smoke_run --label vulkan_final --out logs/phase0_timing
-Last 15 output lines:
+Summary:
 {
   "label": "vulkan_final",
   "backend": "1",
@@ -143,10 +140,9 @@ Last 15 output lines:
   "peak_system_ram_used_gb": 15.06,
   "call_log": "logs\\phase0_timing\\vulkan_final\\calls.jsonl"
 }
-
 CPU timing command:
 .\.venv\Scripts\python.exe -m kerala.tools.smoke_run --label cpu_calls --out logs/phase0_timing
-Last 15 output lines:
+Summary:
 {
   "label": "cpu_calls",
   "backend": "0",
@@ -162,3 +158,31 @@ Last 15 output lines:
   "peak_system_ram_used_gb": 12.45,
   "call_log": "logs\\phase0_timing\\cpu_calls\\calls.jsonl"
 }
+## Last acceptance output
+
+Targeted Phase 1 command:
+.\.venv\Scripts\python.exe -m pytest -q tests\test_kerala_fixes.py
+Last output:
+..........                                                               [100%]
+10 passed in 2.53s
+
+Full Phase 1 comparison command:
+.\.venv\Scripts\python.exe -m pytest -q tests --ignore=tests\test_ui.py
+Last 15 output lines:
+        - 0o600
+E         + 0o666
+
+tests\test_smoke.py:142: AssertionError
+---------------------------- Captured stderr call -----------------------------
+2026-11-14 13:32:51,344 [INFO] stored API key for openai (sk-ab…1234)
+------------------------------ Captured log call -----------------------------
+INFO     gisclaw:server.py:176 stored API key for openai (sk-ab…1234)
+=========================== short test summary info ===========================
+FAILED tests/test_local.py::test_local_probe_add_test_run - assert (False is ...
+FAILED tests/test_smoke.py::test_run_to_completion - AssertionError: assert (...
+FAILED tests/test_smoke.py::test_cancel_busy_and_rejoin - assert (None)
+FAILED tests/test_smoke.py::test_toolbox_is_recorded - assert (False)
+FAILED tests/test_smoke.py::test_settings_mask_keys - AssertionError: assert ...
+5 failed, 19 passed in 20.72s
+
+The five failing baseline tests are identical to the Phase 0 failures; no regressions. The 10 new Kerala fix tests passed.
