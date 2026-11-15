@@ -1,5 +1,5 @@
 # PROGRESS
-## Status: Phase 5 smoke rerun in progress after Kerala-only F6 path fix; matrix not started
+## Status: Phase 5 STOP gate reached after F6 rerun; floor check 0/6; matrix not started
 ## Checklist
 - [x] Phase 0
   - [x] 0.1 git init + .gitignore + upstream snapshot commit
@@ -39,14 +39,14 @@
   - [x] GOLD_REVIEW.md
   - [x] Gold acceptance and review STOP
   - [x] Freeze after "gold approved"
-- [ ] Phase 5 — runner, scorer, demo, smoke tests (STOP gate; rerun after F6 fix)
+- [x] Phase 5 — runner, scorer, demo, smoke tests (STOP gate after F6 rerun)
   - [x] run_one and run_bench
   - [x] Scorer, tables, taxonomy, figures
   - [x] Demo CLI
   - [x] Offline harness tests
   - [x] Approved smoke runs only
-  - [ ] Rerun D01–D03 development smoke and unchanged P01/P06 floor check
-  - [ ] Apply floor rule and stop before matrix
+  - [x] Rerun D01–D03 development smoke and unchanged P01/P06 floor check
+  - [x] Apply floor rule: 0/6; STOP before matrix
 - [ ] Phase 6 — score, analyse, write
   - [ ] Score matrix and inspect at least 10 failed traces
   - [ ] Draft REPORT.md
@@ -102,7 +102,8 @@ All runs used GISReActAgent on examples\urban-heat-madison, task "Compute the me
 
 ## Needs Kirito
 - Gold was approved and frozen. Do not edit `questions.yaml`, `rubric.yaml`, `gold.json`, `kerala_pack.yaml`, or the top-level `data/kerala/layers/` files; the frozen test guards their approved hashes and layer listing.
-- Phase 5's first floor run failed 0/6, so the matrix was not started. Kirito approved rerunning the original D01–D03 development smoke and unchanged P01/P06 six-cell floor after the Kerala-only F6 fix. The run is pending/completing below; apply the original two-of-six floor rule.
+- The approved post-F6 rerun scored 0/6 correct on the unchanged P01/P06 floor check (0/6 correct under own defensible parameters). The two-of-six rule requires STOP; do not run the matrix. The detailed table and first trace errors are recorded below and in `REPORT.md`.
+- If Kirito later authorizes another floor pilot, consider replacing P01/P06 with the simpler raster-only P05/P08 pair (VV open-water area and low-lying area). This is a proposal only; no question, gold value, or current STOP decision was changed.
 - Kirito explicitly resumed the work by directing Phase 1 after the Phase 0 STOP gate. The smoke task failures remain documented: Vulkan reached the 12-round limit; CPU stopped on repeated-code detection. The projected local matrix is below 20 hours, so no cut is required by the prompt.
 - The initial pre-rebuild Otsu stop and later KI-gate STOP are superseded by Kirito's post-hoc valley decision recorded under Decisions made. No plausible range or rubric range changed.
 - Pre-rebuild Phase 2 threshold diagnosis (historical; superseded by the approved rerun below):
@@ -303,12 +304,11 @@ Last output:
 ## Phase 5 execution and STOP gate
 
 - Implemented and committed the isolated runner (`run_one.py`, `run_bench.py`), scorer, demo CLI, model registry, offline harness, and frozen-layer guard. Each real run used `data/kerala/layers` only; the manifest, pack, cache and gold files remained outside its dataset work directory.
-- The local development smoke was `D01,D02,D03 × pack × local-qwen7b` in batch `phase5_local_dev`: all three were format failures. D01 and D03 finished without `answer.json`; D02 ended `paused_quota` after eight calls. Their mean observed duration was 3.92 min/run. The agent repeatedly listed the visible data but attempted vector loads without the required `dataset/` path, then repeated `list_files`.
-- The approved local floor batch `P01,P06 × noparam,inline,pack` completed in `phase5_local_floor`. All six runs finished, were `FORMAT` failures (no answer file), and scored 0/6 `correct_final` and 0/6 `correct_given_own_params`. Individual wall minutes: P01/noparam 6.5690, P01/inline 3.9036, P01/pack 3.8802; P06/noparam 4.0450, P06/inline 3.3096, P06/pack 3.1352. Mean: 4.14 min/run.
+- Initial pre-F6 local development smoke (`phase5_local_dev`) and floor batch (`phase5_local_floor`) failed; the following approved rerun supersedes their smoke scores.
 - Maximum per-call prompt-token count was 5,645 (D02), below the 14,500 limit. The floor batch maximum was 5,577. `results/summary/` holds the floor CSVs, tables and figures. Run artifacts remain git-ignored under `results/runs/`.
-- The approved cloud D01 pack smoke was not run: `kerala/.env`/`GEMINI_API_KEY` is absent. No credential was invented or external cloud request attempted.
+- Cloud smoke was skipped as Kirito directed; `kerala/.env` does not exist yet.
 - The first local floor launch produced zero-call `PermissionError: [WinError 5] Access is denied` entries because the restricted shell could not create the Windows dataset junction. The authorized external runner retried those `error` entries, created the temporary junctions and produced the six completed run artifacts above. The same limitation affected the in-sandbox test invocation; the required acceptance command passed in the external runner.
-- Per the Phase 5 rule, fewer than two successful floor cells requires STOP. The first run set failed that rule; Kirito has now approved rerunning the original set after the F6 prompt-path correction, with the matrix still held behind the floor outcome.
+- Per the Phase 5 rule, fewer than two successful floor cells requires STOP. The initial failure is superseded by the approved F6 rerun results below; the matrix remains prohibited.
 
 ### F6 prompt path fix and approved rerun
 
@@ -316,7 +316,22 @@ Last output:
 - Kerala's `build_data_text` now prefixes each listed profile path with `dataset/`. The shared answer contract tells all arms that input paths start with `dataset/`, outputs belong in `pred_results/`, and provides a three-line `execute` example using `json.dump` for `pred_results/answer.json`.
 - Prompt-equality/leak coverage verifies the common contract across all arms and verifies prefixed layer paths. `kerala.bench.prompt_preview` saves the rendered system prompt and task for inspection without a model call.
 - Focused acceptance command `pytest -q tests/test_kerala_pack.py tests/test_kerala_checker.py tests/test_kerala_leak.py tests/test_kerala_harness.py tests/test_kerala_frozen.py` passed: 35 tests. The exact P01/noparam system prompt and task were saved to `results/_profile/example_prompt_P01_noparam.txt`; it contains `dataset/` in all nine listed layer paths and in the shared contract.
-- Kirito approved the unchanged Phase 5 smoke set: D01–D03 × pack × local-qwen7b, then P01/P06 × all three arms × local-qwen7b. Cloud smoke is skipped until `kerala/.env` is added. Report all nine runs and apply the original floor rule, then STOP.
+- Kirito approved the unchanged Phase 5 smoke set: D01–D03 × pack × local-qwen7b, then P01/P06 × all three arms × local-qwen7b. The D01–D03 group ran first as `phase5_f6_dev`; the six-cell floor ran second as `phase5_f6_floor`. Cloud smoke was skipped until `kerala/.env` is added.
+- A first scheduler invocation briefly selected D01/noparam by mistake. It was terminated before the Ollama server was started, produced no `meta.json` or trace, and is excluded from the nine approved runs.
+- D01 and D02 were format-valid and correct. D03 was format-invalid. On the unchanged six-cell floor, no run was correct: `correct_final=0/6`, `correct_given_own_params=0/6`. This fails the >=2/6 requirement and triggers the Phase 5 STOP gate; no matrix was run.
+- Largest per-call prompt was 8,270 tokens (P06/inline), below 14,500. Development-smoke times were D01 4.84, D02 5.17, D03 5.28 minutes. Floor times were P01/noparam 24.60, P01/inline 14.37, P01/pack 10.01, P06/inline 13.55, P06/pack 8.30, P06/noparam 6.85 minutes.
+
+| QID / arm | exit_reason | format_ok | correct_final | correct_given_own_params | rounds | minutes | First error in trace, if failed |
+|---|---|---:|---:|---:|---:|---:|---|
+| D01 / pack | finished | yes | yes | n/a | 5 | 4.84 | — |
+| D02 / pack | finished | yes | yes | n/a | 9 | 5.17 | — |
+| D03 / pack | finished | no | no | n/a | 11 | 5.28 | geoprocess `clip`: missing required `overlay` input |
+| P01 / noparam | finished | no | no | no | 12 | 24.60 | geoprocess `buffer`: execution exceeded the 300 s limit and was stopped |
+| P01 / inline | finished | yes | no | no | 12 | 14.37 | geoprocess `clip`: missing required `overlay` input |
+| P01 / pack | finished | no | no | no | 11 | 10.01 | geoprocess `clip`: missing required `overlay` input |
+| P06 / noparam | finished | no | no | no | 10 | 6.85 | geoprocess `attribute_join`: missing required `layer` input |
+| P06 / inline | max_rounds | no | no | no | 12 | 13.55 | geoprocess `attribute_join`: missing required `layer` input |
+| P06 / pack | finished | no | no | no | 12 | 8.30 | unknown geoprocess operation `threshold` |
 
 Phase 5 acceptance command:
 `.\.venv\Scripts\python.exe -m pytest -q tests\test_kerala_harness.py tests\test_kerala_frozen.py`
@@ -324,5 +339,10 @@ Phase 5 acceptance command:
 Last output:
 ```text
 .......                                                                  [100%]
-7 passed in 1.65s
+7 passed in 1.61s
 ```
+
+Prompt/leak and combined acceptance command:
+`.\.venv\Scripts\python.exe -m pytest -q tests\test_kerala_pack.py tests\test_kerala_checker.py tests\test_kerala_leak.py tests\test_kerala_harness.py tests\test_kerala_frozen.py`
+
+Output: `35 passed in 2.04s`.
