@@ -34,7 +34,14 @@ ANSWER_CONTRACT = '''Write `pred_results/answer.json` as a JSON object with exac
   "assumptions": "one sentence",
   "method": "one sentence"
 }
-If the data cannot support an answer, use status `cannot_answer`, set value and unit to null, and explain why in assumptions.'''
+If the data cannot support an answer, use status `cannot_answer`, set value and unit to null, and explain why in assumptions.
+All input files are in dataset/ (e.g. dataset/districts.gpkg). Write every output to pred_results/.
+Use the execute tool with this 3-line Python example after constructing your answer dictionary:
+```python
+import json
+with open("pred_results/answer.json", "w", encoding="utf-8") as f:
+    json.dump(answer, f, ensure_ascii=False, indent=2)
+```'''
 
 
 def _question_id(question: Mapping[str, Any]) -> str:
@@ -53,8 +60,22 @@ def build_data_text(
     _link_dataset(str(source), str(data_link))
     profile = data_profile.profile_project(str(workspace))
     block = data_profile.build_block(profile)
+    block = _prefix_dataset_paths(block)
     (workspace / "data_block.txt").write_text(block, encoding="utf-8")
     return block
+
+
+def _prefix_dataset_paths(block: str) -> str:
+    """Use the same relative paths the GIS agent sees under its dataset/ link."""
+    lines = []
+    for line in block.splitlines():
+        if line.startswith("- "):
+            path, separator, description = line[2:].partition(" — ")
+            if not path.startswith("dataset/"):
+                path = f"dataset/{path}"
+            line = f"- {path}{separator}{description}"
+        lines.append(line)
+    return "\n".join(lines)
 
 
 def build_system_prompt(
@@ -137,6 +158,27 @@ def compose_task(
         )
     )
     return "\n\n".join(parts)
+
+
+def compose_full_prompt(
+    question: Mapping[str, Any],
+    arm: str,
+    data_text: str,
+    pack: Mapping[str, Any] | None = None,
+) -> str:
+    """Render the exact system prompt and task passed to GISReActAgent."""
+    from src.agent.tools import GISToolkit
+
+    toolkit = GISToolkit(sandbox=None, data_dir="dataset")
+    system_prompt = build_system_prompt(
+        tool_descriptions=toolkit.tool_descriptions + DOMAIN_PARAM_DESCRIPTION,
+        arm=arm,
+        needs_params=question.get("needs_params", []),
+        data_text=data_text,
+        pack=pack,
+    )
+    task = compose_task(question, arm, pack=pack)
+    return f"## SYSTEM PROMPT\n{system_prompt}\n\n## TASK\n{task}"
 
 
 class AnswerChecker:

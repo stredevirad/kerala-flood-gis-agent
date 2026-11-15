@@ -1,5 +1,5 @@
 # PROGRESS
-## Status: Phase 5 STOP gate reached: local floor check failed (0/6); no matrix started
+## Status: Phase 5 smoke rerun in progress after Kerala-only F6 path fix; matrix not started
 ## Checklist
 - [x] Phase 0
   - [x] 0.1 git init + .gitignore + upstream snapshot commit
@@ -39,13 +39,14 @@
   - [x] GOLD_REVIEW.md
   - [x] Gold acceptance and review STOP
   - [x] Freeze after "gold approved"
-- [x] Phase 5 — runner, scorer, demo, smoke tests (STOP gate)
+- [ ] Phase 5 — runner, scorer, demo, smoke tests (STOP gate; rerun after F6 fix)
   - [x] run_one and run_bench
   - [x] Scorer, tables, taxonomy, figures
   - [x] Demo CLI
   - [x] Offline harness tests
   - [x] Approved smoke runs only
-  - [x] Smoke acceptance and matrix STOP (floor rule failed; matrix prohibited)
+  - [ ] Rerun D01–D03 development smoke and unchanged P01/P06 floor check
+  - [ ] Apply floor rule and stop before matrix
 - [ ] Phase 6 — score, analyse, write
   - [ ] Score matrix and inspect at least 10 failed traces
   - [ ] Draft REPORT.md
@@ -90,6 +91,7 @@ All runs used GISReActAgent on examples\urban-heat-madison, task "Compute the me
 - uv and Ollama were already installed. The venv used Python 3.11.16 and the exact desktop, dev and Kerala requirement files.
 - The model pull and Ollama access needed elevation for the user model directory. The agent timing run needed elevation for Windows junction creation.
 - Python timing output used PYTHONIOENCODING=utf-8 after GISclaw progress output failed under cp1252.
+- F6 (documented upstream issue): GISclaw's `app.runner.DATA_BLOCK` says the layer listing is complete for `data/`, and `app.data_profile` renders bare layer names, while the GISReActAgent exposes files under `dataset/<name>`. Kerala now prefixes each profile listing path with `dataset/` and includes identical input/output path guidance plus an `execute`/`json.dump` example in every arm's answer contract. The upstream mismatch is documented only; `app/` and `src/` remain untouched.
 - Whole-system RAM was sampled because the Ollama model runner shares the Intel Arc system memory; Python-process memory alone is not representative.
 - Earlier, Kirito approved rebuilding only the Sentinel-1 VV mosaic and selecting KI if its range/agreement gate passed; the subsequent decision below supersedes KI as the selected method. Otsu and KI remain diagnostics.
 - Kirito superseded the KI-gated threshold selection after reviewing the histogram: choose T=-14.0 dB from T_valley=-13.95 dB using conventional half-up rounding. T_ki=-12.55 dB missed the prior range by 0.45 dB; the water/land trough is selected because the seasonality 1–9 flooded-vegetation tail biases Otsu and breaks KI's Gaussian-class assumption. Keep the [-22,-13] plausible range and all rubric ranges unchanged. Pack provenance is updated as instructed. This is a post-hoc threshold choice to describe in REPORT.md during Phase 6.
@@ -100,7 +102,7 @@ All runs used GISReActAgent on examples\urban-heat-madison, task "Compute the me
 
 ## Needs Kirito
 - Gold was approved and frozen. Do not edit `questions.yaml`, `rubric.yaml`, `gold.json`, `kerala_pack.yaml`, or the top-level `data/kerala/layers/` files; the frozen test guards their approved hashes and layer listing.
-- Phase 5 floor check failed 0/6. Approve a revised, smaller/easier floor set before any further model run; the Phase 5 prompt prohibits the matrix until this is resolved.
+- Phase 5's first floor run failed 0/6, so the matrix was not started. Kirito approved rerunning the original D01–D03 development smoke and unchanged P01/P06 six-cell floor after the Kerala-only F6 fix. The run is pending/completing below; apply the original two-of-six floor rule.
 - Kirito explicitly resumed the work by directing Phase 1 after the Phase 0 STOP gate. The smoke task failures remain documented: Vulkan reached the 12-round limit; CPU stopped on repeated-code detection. The projected local matrix is below 20 hours, so no cut is required by the prompt.
 - The initial pre-rebuild Otsu stop and later KI-gate STOP are superseded by Kirito's post-hoc valley decision recorded under Decisions made. No plausible range or rubric range changed.
 - Pre-rebuild Phase 2 threshold diagnosis (historical; superseded by the approved rerun below):
@@ -306,7 +308,15 @@ Last output:
 - Maximum per-call prompt-token count was 5,645 (D02), below the 14,500 limit. The floor batch maximum was 5,577. `results/summary/` holds the floor CSVs, tables and figures. Run artifacts remain git-ignored under `results/runs/`.
 - The approved cloud D01 pack smoke was not run: `kerala/.env`/`GEMINI_API_KEY` is absent. No credential was invented or external cloud request attempted.
 - The first local floor launch produced zero-call `PermissionError: [WinError 5] Access is denied` entries because the restricted shell could not create the Windows dataset junction. The authorized external runner retried those `error` entries, created the temporary junctions and produced the six completed run artifacts above. The same limitation affected the in-sandbox test invocation; the required acceptance command passed in the external runner.
-- Per the Phase 5 rule, fewer than two successful floor cells requires STOP. Do not run the matrix. A smaller/easier proposed replacement floor set is D01, D03 plus one simple parameter question whose prompt explicitly demonstrates the required `dataset/<layer>` path; it must be approved before any additional model run.
+- Per the Phase 5 rule, fewer than two successful floor cells requires STOP. The first run set failed that rule; Kirito has now approved rerunning the original set after the F6 prompt-path correction, with the matrix still held behind the floor outcome.
+
+### F6 prompt path fix and approved rerun
+
+- Root cause: upstream `app.runner.DATA_BLOCK` describes a complete listing for `data/`, `app.data_profile.build_block` emits bare layer names, and the agent's working directory exposes layers at `dataset/<name>`. This is documented as upstream issue F6 only; no `app/` or `src/` file is changed.
+- Kerala's `build_data_text` now prefixes each listed profile path with `dataset/`. The shared answer contract tells all arms that input paths start with `dataset/`, outputs belong in `pred_results/`, and provides a three-line `execute` example using `json.dump` for `pred_results/answer.json`.
+- Prompt-equality/leak coverage verifies the common contract across all arms and verifies prefixed layer paths. `kerala.bench.prompt_preview` saves the rendered system prompt and task for inspection without a model call.
+- Focused acceptance command `pytest -q tests/test_kerala_pack.py tests/test_kerala_checker.py tests/test_kerala_leak.py tests/test_kerala_harness.py tests/test_kerala_frozen.py` passed: 35 tests. The exact P01/noparam system prompt and task were saved to `results/_profile/example_prompt_P01_noparam.txt`; it contains `dataset/` in all nine listed layer paths and in the shared contract.
+- Kirito approved the unchanged Phase 5 smoke set: D01–D03 × pack × local-qwen7b, then P01/P06 × all three arms × local-qwen7b. Cloud smoke is skipped until `kerala/.env` is added. Report all nine runs and apply the original floor rule, then STOP.
 
 Phase 5 acceptance command:
 `.\.venv\Scripts\python.exe -m pytest -q tests\test_kerala_harness.py tests\test_kerala_frozen.py`
