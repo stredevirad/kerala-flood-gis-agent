@@ -13,7 +13,8 @@
 
 - PC: NVIDIA GeForce RTX 4060 Laptop GPU, 8,188 MiB VRAM, driver 591.66; 24 GB system RAM.
 - Installed uv 0.13.8 and Ollama 0.40.16 with winget. Python 3.11 was present; `uv python install 3.11` and the Phase 0 venv build completed in the background. Venv reports Python 3.11.18. Logs: `logs/machine_setup/`.
-- Set user `OLLAMA_CONTEXT_LENGTH=16384` before Ollama was installed/launched. Confirm the loaded context and CUDA backend during the model-selection run.
+- Set user `OLLAMA_CONTEXT_LENGTH=16384` before Ollama was installed/launched. `server.log` confirms `OLLAMA_CONTEXT_LENGTH:16384` and reports `library=CUDA`, NVIDIA GeForce RTX 4060 Laptop GPU, compute capability 8.9, and 6.9 GiB initially available VRAM. Confirm loaded context and processor split with `ollama ps` while a selection model is loaded.
+- Verified the exact tags on the official [gpt-oss library page](https://ollama.com/library/gpt-oss/tags) and [qwen3.5 library page](https://ollama.com/library/qwen3.5/tags): `gpt-oss:20b` and `qwen3.5:9b`.
 - `powercfg /change standby-timeout-ac 0` was applied. AC sleep was already Never (index 0); restore to the original value with the same command: `powercfg /change standby-timeout-ac 0`.
 - Frozen check command: `\.venv\Scripts\python.exe -m pytest -q tests\test_kerala_frozen.py`; output: `1 passed in 0.75s`.
 - Reapplied read-only attributes with `attrib +R data\kerala\layers\*`; all nine top-level layer files show `ReadOnly`.
