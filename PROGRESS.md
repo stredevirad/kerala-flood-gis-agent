@@ -414,3 +414,11 @@ Prompt/leak and combined acceptance command:
 `.\.venv\Scripts\python.exe -m pytest -q tests\test_kerala_pack.py tests\test_kerala_checker.py tests\test_kerala_leak.py tests\test_kerala_harness.py tests\test_kerala_frozen.py`
 
 Output: `35 passed in 2.04s`.
+
+## Session: Claude Code handoff (2026-11-17)
+
+- Took over from Codex. Read `kerala/HANDOFF_CLAUDE.md`, AGENTS.md, PROGRESS.md and the runner/agent code. Kirito pre-approved unattended work up to (not including) Phase 6, with no GitHub push.
+- Created `CLAUDE.md` (imports `@AGENTS.md`) and saved the handoff as `kerala/HANDOFF_CLAUDE.md`.
+- Secret hygiene: the tracked `kerala/.env.example` had the real Gemini key pasted into it (uncommitted working-tree change). Verified `kerala/.env` holds the same key (compared in Python without printing), then restored `.env.example` to its blank committed version with `git checkout -- kerala/.env.example`. The key was never staged or committed. `kerala/.env` is git-ignored (`.gitignore:45`) and has a `GEMINI_API_KEY=` line with length > 20.
+- Kerala suite: `.venv/Scripts/python.exe -m pytest -q tests/test_kerala_*.py` → `47 passed in 11.31s`.
+- Frozen hashes: `.venv/Scripts/python.exe -m pytest -q tests/test_kerala_frozen.py` → `1 passed in 0.49s`.
