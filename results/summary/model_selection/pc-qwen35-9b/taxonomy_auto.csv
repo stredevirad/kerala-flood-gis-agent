@@ -1,0 +1,7 @@
+batch,model,qid,arm,taxonomy_auto,manual_label
+selection_pc_qwen35_9b,pc-qwen35-9b,P01,inline,TOOL_BUG,
+selection_pc_qwen35_9b,pc-qwen35-9b,P01,noparam,TOOL_BUG,
+selection_pc_qwen35_9b,pc-qwen35-9b,P01,pack,LOGIC,
+selection_pc_qwen35_9b,pc-qwen35-9b,P06,inline,FORMAT,
+selection_pc_qwen35_9b,pc-qwen35-9b,P06,noparam,FORMAT,
+selection_pc_qwen35_9b,pc-qwen35-9b,P06,pack,CRASH,

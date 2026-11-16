@@ -1,0 +1,7 @@
+batch,model,qid,arm,expected_status,format_ok,correct_final,correct_first_attempt,checker_rejections,pack_calls,params_reported,params_in_code,geographic_measure_flag,assumption_stated,assumption_defensible,correct_given_own_params,minutes,tokens,exit_reason,backoff_seconds,wall_seconds,answer_status,checker_text,taxonomy_auto
+selection_pc_gptoss20b,pc-gptoss20b,P01,inline,ok,False,False,False,0,0,{},False,False,False,False,False,3.9485,28565,finished,0.0,236.907,,,FORMAT
+selection_pc_gptoss20b,pc-gptoss20b,P01,noparam,ok,False,False,False,0,0,{},False,False,False,False,False,10.6758,45642,finished,0.0,640.546,,,FORMAT
+selection_pc_gptoss20b,pc-gptoss20b,P01,pack,ok,False,False,False,0,0,{},False,False,False,False,False,7.2427,28770,finished,0.0,434.562,,,FORMAT
+selection_pc_gptoss20b,pc-gptoss20b,P06,inline,ok,False,False,False,0,0,{},False,False,False,False,False,11.9992,39620,finished,0.0,719.953,,,FORMAT
+selection_pc_gptoss20b,pc-gptoss20b,P06,noparam,ok,False,False,False,0,0,{},False,False,False,False,False,13.1398,40254,finished,1.1968400197889795,788.39,,,FORMAT
+selection_pc_gptoss20b,pc-gptoss20b,P06,pack,ok,False,False,False,0,0,{},False,False,False,False,False,6.6976,28674,paused_quota,0.0,401.859,,,CRASH

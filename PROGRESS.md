@@ -1,5 +1,5 @@
 # PROGRESS
-## Status: Phase 5 PC model-selection pilots in progress; original Qwen 7B floor was 0/6; matrix not started
+## Status: Phase 5 STOP — all three candidate models are below the 2/6 floor; no model selected; matrix not started
 
 ## Model selection
 
@@ -7,19 +7,21 @@
 
 - The original nine approved smoke runs were D01–D03 × pack plus P01/P06 × all three arms. D01 and D02 passed; D03 was format-invalid. The six floor cells scored 0/6 `correct_final` and 0/6 `correct_given_own_params`, below the 2/6 rule.
 - Failure modes were repeated GIS argument errors: `clip` lacked `overlay`, `attribute_join` lacked `layer`, P01/noparam's `buffer` call exceeded 300 s, P06/pack used an unknown `threshold` operation, and P01/inline returned `cannot_answer` for an answerable question. The complete nine-row table is under Phase 5 execution below.
-- Kirito authorized a PC-only candidate selection with the same P01/P06 questions and unchanged floor: run `pc-gptoss20b` first, and run `pc-qwen35-9b` only if the first candidate scores fewer than 2/6. Stop after selection; no matrix run is authorized here.
+- Kirito authorized a PC-only candidate selection with the same P01/P06 questions and unchanged floor. `pc-gptoss20b` scored 0/6, so `pc-qwen35-9b` was run and also scored 0/6. No candidate is selected; the Phase 5 STOP rule remains in force and no matrix was started.
 
 ## Current PC setup and verification
 
 - PC: NVIDIA GeForce RTX 4060 Laptop GPU, 8,188 MiB VRAM, driver 591.66; 24 GB system RAM.
 - Installed uv 0.13.8 and Ollama 0.40.16 with winget. Python 3.11 was present; `uv python install 3.11` and the Phase 0 venv build completed in the background. Venv reports Python 3.11.18. Logs: `logs/machine_setup/`.
-- Set user `OLLAMA_CONTEXT_LENGTH=16384` before Ollama was installed/launched. `server.log` confirms `OLLAMA_CONTEXT_LENGTH:16384` and reports `library=CUDA`, NVIDIA GeForce RTX 4060 Laptop GPU, compute capability 8.9, and 6.9 GiB initially available VRAM. Confirm loaded context and processor split with `ollama ps` while a selection model is loaded.
+- Set user `OLLAMA_CONTEXT_LENGTH=16384` with `[Environment]::SetEnvironmentVariable` before Ollama was installed/launched. `server.log` confirms `OLLAMA_CONTEXT_LENGTH:16384` and reports `library=CUDA`, NVIDIA GeForce RTX 4060 Laptop GPU, compute capability 8.9, and 6.9 GiB initially available VRAM. During the pilots, `ollama ps` showed `gpt-oss:20b` at `59%/41% CPU/GPU`, context `16384`, and `qwen3.5:9b` at `16%/84% CPU/GPU`, context `16384`.
 - Verified the exact tags on the official [gpt-oss library page](https://ollama.com/library/gpt-oss/tags) and [qwen3.5 library page](https://ollama.com/library/qwen3.5/tags): `gpt-oss:20b` and `qwen3.5:9b`.
 - `powercfg /change standby-timeout-ac 0` was applied. AC sleep was already Never (index 0); restore to the original value with the same command: `powercfg /change standby-timeout-ac 0`.
 - Frozen check command: `.\.venv\Scripts\python.exe -m pytest -q tests\test_kerala_frozen.py`; output: `1 passed in 0.75s`.
 - Reapplied read-only attributes with `attrib +R data\kerala\layers\*`; all nine top-level layer files show `ReadOnly`.
 - Phase 5 acceptance command: `.\.venv\Scripts\python.exe -m pytest -q tests\test_kerala_harness.py tests\test_kerala_frozen.py`; last output lines: `....... [100%]` / `7 passed in 3.78s`.
 - Full Kerala suite command: `$keralaTests = Get-ChildItem -LiteralPath tests -Filter 'test_kerala_*.py' | Sort-Object Name | ForEach-Object { $_.FullName }; & .\.venv\Scripts\python.exe -m pytest -q $keralaTests`; last output lines: `............................................... [100%]` / `47 passed in 5.92s`.
+- Final post-pilot frozen check: `.\.venv\Scripts\python.exe -m pytest -q tests\test_kerala_frozen.py`; output: `.` / `1 passed in 0.58s`. The runner also checked frozen hashes before and after every candidate run.
+- Exact model tags were verified on the official [gpt-oss tags page](https://ollama.com/library/gpt-oss/tags) and [qwen3.5 tags page](https://ollama.com/library/qwen3.5/tags). Both are installed; pull and run logs are under `logs/machine_setup/`.
 
 ## Checklist
 - [x] Phase 0
@@ -68,7 +70,7 @@
   - [x] Approved smoke runs only
   - [x] Rerun D01–D03 development smoke and unchanged P01/P06 floor check
   - [x] Apply floor rule: 0/6; STOP before matrix
-  - [ ] User-authorized PC model-selection pilot(s), same P01/P06 floor rule; stop before matrix
+  - [x] User-authorized PC model-selection pilots, same P01/P06 floor rule; both candidates scored 0/6; STOP before matrix
 - [ ] Phase 6 — score, analyse, write
   - [ ] Score matrix and inspect at least 10 failed traces
   - [ ] Draft REPORT.md
@@ -85,7 +87,7 @@
 - Failing tests: test_local_probe_add_test_run; test_run_to_completion; test_cancel_busy_and_rejoin; test_toolbox_is_recorded; test_settings_mask_keys.
 - The failures were recorded as the unmodified repository baseline. No upstream product files were changed.
 
-### Ollama
+### Ollama (original Phase 0 laptop)
 - Ollama version: 0.40.13; model: qwen2.5-coder:7b, Q4_K_M; derived model: gisclaw-qwen7b-16k.
 - loaded_context returned 16384 after a model call; the runner log also showed n_ctx_seq=16384.
 - Vulkan trial required OLLAMA_IGPU_ENABLE=1. The default Vulkan configuration alone dropped the Intel Arc iGPU and used CPU.
@@ -117,6 +119,8 @@ All runs used GISReActAgent on examples\urban-heat-madison, task "Compute the me
 - Whole-system RAM was sampled because the Ollama model runner shares the Intel Arc system memory; Python-process memory alone is not representative.
 - Kirito authorized a pre-matrix PC model-selection pilot after the original Qwen2.5-Coder:7B floor scored 0/6. Real benchmark models now use `max_rounds=16` in every arm; the offline `stub` remains at 2 rounds for its bounded harness tests. The runner records output tokens/s and samples system RAM and NVIDIA VRAM while each isolated run is active.
 - OpenAIEngine drops `<think>` blocks and serialized Harmony analysis channels before returning text to the ReAct parser; separate `reasoning_content` and `thinking` fields are ignored. Focused reasoning coverage is included in the full Kerala test suite.
+- For the authorized PC pilots, the model configs used `max_rounds=16` for all real models and all three arms. No full matrix was started because neither new candidate reached the unchanged floor.
+- The two P06/pack runs marked `paused_quota` are false-positive exit labels from the existing broad `"429" in serialized trace` check: their metadata has no error and zero backoff, the local Ollama request returned HTTP 200, and the trace's numeric `gen_time_ms` contained the substring `429`. Keep the recorded `exit_reason` in the per-run tables, but do not interpret those two labels as an external rate limit.
 - Earlier, Kirito approved rebuilding only the Sentinel-1 VV mosaic and selecting KI if its range/agreement gate passed; the subsequent decision below supersedes KI as the selected method. Otsu and KI remain diagnostics.
 - Kirito superseded the KI-gated threshold selection after reviewing the histogram: choose T=-14.0 dB from T_valley=-13.95 dB using conventional half-up rounding. T_ki=-12.55 dB missed the prior range by 0.45 dB; the water/land trough is selected because the seasonality 1–9 flooded-vegetation tail biases Otsu and breaks KI's Gaussian-class assumption. Keep the [-22,-13] plausible range and all rubric ranges unchanged. Pack provenance is updated as instructed. This is a post-hoc threshold choice to describe in REPORT.md during Phase 6.
 - Kirito revised the Phase 4 facility definition before approval: a facility is flood-affected when its selected representative point/centroid, or its polygon under `intersects`, lies within a 250 m buffer of the detected flood extent. The new project-convention pack key is `facility_flood_buffer_m`, with a 50–1,000 m defensible range and 100/250/500 m sensitivity.
@@ -360,6 +364,42 @@ These are the nine original smoke runs; the failure modes show that the below-fl
 | P06 / noparam | finished | no | no | no | 10 | 6.85 | geoprocess `attribute_join`: missing required `layer` input |
 | P06 / inline | max_rounds | no | no | no | 12 | 13.55 | geoprocess `attribute_join`: missing required `layer` input |
 | P06 / pack | finished | no | no | no | 12 | 8.30 | unknown geoprocess operation `threshold` |
+
+### Model selection: PC candidates — both below the floor
+
+The authorized selection script ran the same six cells for each candidate in sequence and stopped after the second score. Commands:
+
+```powershell
+.\.venv\Scripts\python.exe -m kerala.bench.run_bench --model pc-gptoss20b --batch selection_pc_gptoss20b --questions P01,P06 --arms noparam,inline,pack --resume
+.\.venv\Scripts\python.exe -m kerala.bench.run_bench --model pc-qwen35-9b --batch selection_pc_qwen35_9b --questions P01,P06 --arms noparam,inline,pack --resume
+```
+
+The supervisor log is `logs/machine_setup/wait_then_run_selection.out.log`; each score is saved under `results/summary/model_selection/<model>/per_run.csv`. `pc-gptoss20b` scored 0/6 `correct_final` and 0/6 `correct_given_own_params`; all six runs were format-invalid. Every trace began with an empty response that the ReAct loop interpreted as the unknown tool `Args`. This indicates a response-format/integration failure on this setup and does not measure the model's GIS skill.
+
+`pc-qwen35-9b` scored 0/6 for both correctness measures, with 3/6 format-valid outputs. Its P01 answers used parameters or GIS execution that did not match the gold; the P06 runs failed with a missing `select` input, a tuple `.minx` access, and a malformed Python payload. No candidate clears the floor.
+
+| Model | QID / arm | exit_reason | format_ok | correct_final | correct_given_own_params | rounds | minutes | tokens/s | Peak RAM (GB) | Peak VRAM (MiB) | First error in trace |
+|---|---|---|---:|---:|---:|---:|---:|---:|---:|---|---|
+| pc-gptoss20b | P01 / noparam | finished | no | no | no | 9 | 10.68 | 15.41 | 18.67 | 6707 | empty response; parsed as unknown tool `Args` |
+| pc-gptoss20b | P01 / inline | finished | no | no | no | 6 | 3.95 | 21.85 | 18.46 | 6707 | empty response; parsed as unknown tool `Args` |
+| pc-gptoss20b | P01 / pack | finished | no | no | no | 5 | 7.24 | 20.96 | 18.76 | 6707 | empty response; parsed as unknown tool `Args` |
+| pc-gptoss20b | P06 / noparam | finished | no | no | no | 6 | 13.14 | 21.25 | 19.28 | 6708 | empty response; parsed as unknown tool `Args` |
+| pc-gptoss20b | P06 / inline | finished | no | no | no | 6 | 12.00 | 22.06 | 18.88 | 6708 | empty response; parsed as unknown tool `Args` |
+| pc-gptoss20b | P06 / pack | paused_quota* | no | no | no | 5 | 6.70 | 21.91 | 19.10 | 6708 | empty response; parsed as unknown tool `Args` |
+| pc-qwen35-9b | P01 / noparam | finished | yes | no | no | 16 | 5.32 | 13.83 | 19.22 | 7004 | first `geopandas.sjoin` execution failed; trace truncates the exception |
+| pc-qwen35-9b | P01 / inline | finished | yes | no | no | 16 | 3.32 | 20.71 | 13.46 | 7004 | execution failed after flood/hospital bounds; traceback truncated |
+| pc-qwen35-9b | P01 / pack | finished | yes | no | no | 16 | 5.89 | 22.28 | 16.54 | 7004 | failed selecting a joined column; traceback truncates the `KeyError` |
+| pc-qwen35-9b | P06 / noparam | max_rounds | no | no | no | 16 | 3.36 | 23.13 | 16.34 | 7005 | `AttributeError`: tuple has no `.minx` |
+| pc-qwen35-9b | P06 / inline | finished | no | no | no | 16 | 3.30 | 23.05 | 15.50 | 7004 | `select` missing required `layer` input |
+| pc-qwen35-9b | P06 / pack | paused_quota* | no | no | no | 16 | 2.28 | 22.48 | 15.43 | 7005 | malformed `execute` payload; `SyntaxError` |
+
+\* The two `paused_quota` labels are false positives from the trace substring check described under Decisions made; neither run received an HTTP 429 or recorded a model/API error.
+
+The 52-run serial extrapolations from each six-run mean are 7.76 hours for `pc-gptoss20b` and 3.39 hours for `pc-qwen35-9b`. These are timing-only estimates from below-floor candidates, not authorization to run a matrix. No model is selected, so there is no runnable matrix command; the 52-run matrix remains stopped pending Kirito's next decision.
+
+#### Needs Kirito
+
+Both PC candidates scored 0/6, so keep the STOP gate. A next pilot could first fix and verify the local reasoning/tool-call response path before repeating the same P01/P06 floor, or use the previously proposed raster-only P05/P08 pair. This proposal changes no gold value or tolerance. The model configs, `max_rounds=16`, and documented per-run tables are ready for review.
 
 Phase 5 acceptance command:
 `.\.venv\Scripts\python.exe -m pytest -q tests\test_kerala_harness.py tests\test_kerala_frozen.py`
