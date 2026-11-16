@@ -1,0 +1,4 @@
+comparison,both_right,only_left,only_right,both_wrong,descriptive_sign_test_p
+A3 vs A2,0,0,1,1,1.0
+A2 vs A1,0,1,0,1,1.0
+A3 vs A1 controls,0,0,0,0,1.0

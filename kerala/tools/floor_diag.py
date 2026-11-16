@@ -111,7 +111,7 @@ def main(argv: list[str] | None = None) -> int:
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(text, encoding="utf-8")
     (args.out.with_suffix(".json")).write_text(json.dumps(rows, indent=2, default=str) + "\n", encoding="utf-8")
-    print(text)
+    print(text.encode("ascii", "replace").decode("ascii"))  # Windows consoles may be cp1252
     return 0
 
 
