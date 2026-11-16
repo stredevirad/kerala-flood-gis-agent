@@ -16,9 +16,9 @@
 - Set user `OLLAMA_CONTEXT_LENGTH=16384` before Ollama was installed/launched. `server.log` confirms `OLLAMA_CONTEXT_LENGTH:16384` and reports `library=CUDA`, NVIDIA GeForce RTX 4060 Laptop GPU, compute capability 8.9, and 6.9 GiB initially available VRAM. Confirm loaded context and processor split with `ollama ps` while a selection model is loaded.
 - Verified the exact tags on the official [gpt-oss library page](https://ollama.com/library/gpt-oss/tags) and [qwen3.5 library page](https://ollama.com/library/qwen3.5/tags): `gpt-oss:20b` and `qwen3.5:9b`.
 - `powercfg /change standby-timeout-ac 0` was applied. AC sleep was already Never (index 0); restore to the original value with the same command: `powercfg /change standby-timeout-ac 0`.
-- Frozen check command: `\.venv\Scripts\python.exe -m pytest -q tests\test_kerala_frozen.py`; output: `1 passed in 0.75s`.
+- Frozen check command: `.\.venv\Scripts\python.exe -m pytest -q tests\test_kerala_frozen.py`; output: `1 passed in 0.75s`.
 - Reapplied read-only attributes with `attrib +R data\kerala\layers\*`; all nine top-level layer files show `ReadOnly`.
-- Phase 5 acceptance command: `\.venv\Scripts\python.exe -m pytest -q tests\test_kerala_harness.py tests\test_kerala_frozen.py`; last output lines: `....... [100%]` / `7 passed in 10.58s`.
+- Phase 5 acceptance command: `.\.venv\Scripts\python.exe -m pytest -q tests\test_kerala_harness.py tests\test_kerala_frozen.py`; last output lines: `....... [100%]` / `7 passed in 10.58s`.
 - Full Kerala suite command: `$keralaTests = Get-ChildItem -LiteralPath tests -Filter 'test_kerala_*.py' | Sort-Object Name | ForEach-Object { $_.FullName }; & .\.venv\Scripts\python.exe -m pytest -q $keralaTests`; last output lines: `.............................................. [100%]` / `46 passed in 8.21s`.
 
 ## Checklist
