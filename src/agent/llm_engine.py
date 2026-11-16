@@ -66,6 +66,9 @@ def strip_reasoning(text: str) -> str:
         if final_start == -1:
             return ""
         text = text[final_start + len("<|channel|>final"):]
+    elif "<|channel|>final" in low:
+        final_start = low.rfind("<|channel|>final")
+        text = text[final_start + len("<|channel|>final"):]
     return text.strip()
 
 

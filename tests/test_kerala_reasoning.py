@@ -3,7 +3,7 @@
 
 from types import SimpleNamespace
 
-from src.agent.llm_engine import OpenAIEngine
+from src.agent.llm_engine import OpenAIEngine, strip_reasoning
 
 
 def test_openai_engine_returns_only_final_text_from_reasoning_response():
@@ -40,3 +40,9 @@ def test_openai_engine_returns_only_final_text_from_reasoning_response():
     assert result["text"] == final_text
     assert "private" not in result["text"]
     assert "Action: execute" not in result["text"]
+
+
+def test_strip_reasoning_removes_a_standalone_final_channel_marker():
+    final_text = "Thought: answer the task\nAction: finish\nArgs: {}"
+
+    assert strip_reasoning(f"<|channel|>final\n{final_text}") == final_text
