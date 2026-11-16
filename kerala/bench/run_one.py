@@ -30,6 +30,7 @@ class StubEngine:
     def __init__(self, mode: str = "ok"):
         self.mode = mode
         self.backoff_seconds = 0.0
+        self.quota_errors = 0
         self._calls = 0
 
     def load_model(self) -> bool:
@@ -38,6 +39,7 @@ class StubEngine:
     def generate(self, **_kwargs: Any) -> dict[str, Any]:
         self._calls += 1
         if self.mode == "quota":
+            self.quota_errors += 1
             return {"text": "Error during API call: 429 RESOURCE_EXHAUSTED", "tokens_generated": 0, "latency_ms": 1}
         if self.mode == "sleep":
             time.sleep(30)
@@ -106,6 +108,42 @@ def _copy_required_outputs(out: Path) -> None:
             shutil.copyfile(source, out / name)
 
 
+def _is_quota_exception(exc: BaseException | None) -> bool:
+    if exc is None:
+        return False
+    from src.agent.llm_engine import describe_api_error
+    return bool(describe_api_error(exc)["quota"])
+
+
+def classify_exit(*, quota_errors: int, exception: BaseException | None, rounds: int,
+                  success: bool | None, max_rounds: int) -> str:
+    """Label how a run ended from structured signals only.
+
+    A quota stop needs a structured signal: the engine counted a quota error
+    (RateLimitError, HTTP 429 or an explicit RESOURCE_EXHAUSTED field), or the
+    run raised such an exception. Trace and log text is never searched, which
+    fixes the earlier false positives where "429" occurred inside `gen_time_ms`.
+    """
+    if quota_errors > 0 or _is_quota_exception(exception):
+        return "paused_quota"
+    if exception is not None:
+        return "error"
+    if rounds >= max_rounds and not success:
+        return "max_rounds"
+    return "finished"
+
+
+def _write_heartbeat(out: Path, engine: Any, throttle_seconds: float) -> None:
+    """Report rate-limit waiting so run_bench can extend the wall-clock limit."""
+    payload = {
+        "backoff_seconds": float(getattr(engine, "backoff_seconds", 0.0)) + throttle_seconds,
+        "engine_backoff_seconds": float(getattr(engine, "backoff_seconds", 0.0)),
+        "throttle_seconds": throttle_seconds,
+        "updated": time.time(),
+    }
+    (out / "heartbeat.json").write_text(json.dumps(payload) + "\n", encoding="utf-8")
+
+
 def run_one(qid: str, arm: str, model: str, out: Path, *, stub_mode: str = "ok") -> dict[str, Any]:
     """Run one question and persist the standard artifact bundle."""
     if arm not in {"noparam", "inline", "pack"}:
@@ -128,23 +166,38 @@ def run_one(qid: str, arm: str, model: str, out: Path, *, stub_mode: str = "ok")
             model=str(config["model"]), api_key=secret or str(config.get("api_key", "ollama")),
             temperature=float(config.get("temperature", 0)), max_tokens=int(config.get("max_tokens", 1536)),
             base_url=str(config.get("base_url")), seed=config.get("seed"), request_timeout=600,
+            reasoning_effort=config.get("reasoning_effort"),
         )
     started = time.monotonic()
     events: list[dict[str, Any]] = []
     result = None
     caught = ""
+    caught_exc: BaseException | None = None
     max_prompt_tokens = 0
+    # Requests-per-minute limit (cloud free tier): space every model call, not
+    # just every run, at least 60/rpm seconds apart.
+    rpm = config.get("rpm_limit")
+    min_interval = 60.0 / float(rpm) if rpm else 0.0
+    last_call_start: float | None = None
+    throttle_seconds = 0.0
     try:
         if not engine.load_model():
             raise RuntimeError("model initialization failed")
         original_generate = engine.generate
 
         def measured_generate(*args: Any, **kwargs: Any) -> dict[str, Any]:
-            nonlocal max_prompt_tokens
+            nonlocal max_prompt_tokens, last_call_start, throttle_seconds
+            if min_interval and last_call_start is not None:
+                wait = min_interval - (time.monotonic() - last_call_start)
+                if wait > 0:
+                    time.sleep(wait)
+                    throttle_seconds += wait
+            last_call_start = time.monotonic()
             before = engine.get_stats().get("prompt_tokens", 0)
             response = original_generate(*args, **kwargs)
             after = engine.get_stats().get("prompt_tokens", 0)
             max_prompt_tokens = max(max_prompt_tokens, int(after) - int(before))
+            _write_heartbeat(out, engine, throttle_seconds)
             return response
 
         engine.generate = measured_generate
@@ -157,6 +210,7 @@ def run_one(qid: str, arm: str, model: str, out: Path, *, stub_mode: str = "ok")
         result = agent.run(compose_task(question, arm, pack=pack), data_dir=str(LAYERS), work_dir=str(out), on_step=events.append)
     except Exception as exc:
         caught = f"{type(exc).__name__}: {exc}"
+        caught_exc = exc
     finally:
         (out / "trace.jsonl").write_text("".join(json.dumps(event, ensure_ascii=False) + "\n" for event in events), encoding="utf-8")
         for required_log in ("pack_calls.jsonl", "checker.jsonl"):
@@ -166,15 +220,13 @@ def run_one(qid: str, arm: str, model: str, out: Path, *, stub_mode: str = "ok")
     stats = engine.get_stats()
     completion_tokens = int(stats.get("total_output_tokens", 0))
     llm_seconds = float(stats.get("total_time_ms", 0.0)) / 1000.0
-    text = caught + "\n" + "\n".join(json.dumps(event) for event in events)
-    if "429" in text or "RESOURCE_EXHAUSTED" in text:
-        reason = "paused_quota"
-    elif caught:
-        reason = "error"
-    elif result is not None and result.total_rounds >= int(config.get("max_rounds", 16)) and not result.success:
-        reason = "max_rounds"
-    else:
-        reason = "finished"
+    quota_errors = int(getattr(engine, "quota_errors", 0) or 0)
+    reason = classify_exit(
+        quota_errors=quota_errors, exception=caught_exc,
+        rounds=int(getattr(result, "total_rounds", 0) or 0),
+        success=getattr(result, "success", None),
+        max_rounds=int(config.get("max_rounds", 16)),
+    )
     meta = {
         "model_id": config.get("model"), "model_name": model,
         "model_digest": _ollama_digest(config) if config.get("provider") == "ollama" else config.get("model"),
@@ -184,6 +236,10 @@ def run_one(qid: str, arm: str, model: str, out: Path, *, stub_mode: str = "ok")
         "tokens_per_second": round(completion_tokens / llm_seconds, 2) if llm_seconds > 0 else None,
         "context": config.get("context"), "max_prompt_tokens": max_prompt_tokens,
         "wall_seconds": round(elapsed, 3), "backoff_seconds": float(getattr(engine, "backoff_seconds", 0.0)),
+        "throttle_seconds": round(throttle_seconds, 3), "quota_errors": quota_errors,
+        "reasoning_effort": config.get("reasoning_effort"),
+        "native_tool_calls": int(getattr(engine, "native_tool_calls", 0) or 0),
+        "last_api_error": getattr(engine, "last_error", None),
         "exit_reason": reason, "error": caught or None, "git_commit": _git_commit(),
         "pack_hash": _sha256(ROOT / "kerala" / "pack" / "kerala_pack.yaml"),
     }

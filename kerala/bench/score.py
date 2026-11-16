@@ -247,7 +247,12 @@ def _paired(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__); parser.add_argument("--batch", required=True); args = parser.parse_args(argv)
+    global SUMMARY
+    parser = argparse.ArgumentParser(description=__doc__); parser.add_argument("--batch", required=True)
+    parser.add_argument("--out", type=Path, default=None, help="summary directory (default results/summary)")
+    args = parser.parse_args(argv)
+    if args.out is not None:
+        SUMMARY = args.out if args.out.is_absolute() else ROOT / args.out
     rows = score(args.batch); print(f"Scored {len(rows)} runs into {SUMMARY}"); return 0
 
 

@@ -422,3 +422,12 @@ Output: `35 passed in 2.04s`.
 - Secret hygiene: the tracked `kerala/.env.example` had the real Gemini key pasted into it (uncommitted working-tree change). Verified `kerala/.env` holds the same key (compared in Python without printing), then restored `.env.example` to its blank committed version with `git checkout -- kerala/.env.example`. The key was never staged or committed. `kerala/.env` is git-ignored (`.gitignore:45`) and has a `GEMINI_API_KEY=` line with length > 20.
 - Kerala suite: `.venv/Scripts/python.exe -m pytest -q tests/test_kerala_*.py` → `47 passed in 11.31s`.
 - Frozen hashes: `.venv/Scripts/python.exe -m pytest -q tests/test_kerala_frozen.py` → `1 passed in 0.49s`.
+
+### §7.1 F7 — `paused_quota` false positive fixed
+
+- Root cause: `run_one.py` labelled a run `paused_quota` when the string "429" appeared anywhere in the serialized trace; both affected runs had `gen_time_ms` values containing those digits.
+- Fix (upstream file `src/agent/llm_engine.py`, documented as Kerala F7): new `describe_api_error()` classifies an exception as quota only by type (`openai.RateLimitError`), HTTP status 429, or an explicit `RESOURCE_EXHAUSTED` status field in the error body. `OpenAIEngine` keeps `last_error` and a `quota_errors` counter when a call finally fails. `run_one.classify_exit()` uses only those structured signals; no text search remains. `meta.json` now records `quota_errors`, `last_api_error`, `throttle_seconds`.
+- Also fixed in `run_one.py`: the cloud requests-per-minute limit (`rpm_limit`) is now enforced per model call (previously only between runs), and `heartbeat.json` is now written after each call. `run_bench` already read that file to extend the wall-clock limit by backoff time, but nothing wrote it.
+- Regression tests: `tests/test_kerala_f7_f8.py` (includes a run whose trace has `"gen_time_ms": 41429.512` → `finished`).
+- Re-labelled with `.venv/Scripts/python.exe -m kerala.tools.relabel_quota --apply` (keeps `exit_reason_original` in meta): `selection_pc_gptoss20b/.../P06/pack` paused_quota → finished; `selection_pc_qwen35_9b/.../P06/pack` paused_quota → finished (16 rounds, no `finish` call, but real output files, so GISclaw's `success` is true). Re-scored both with `kerala.bench.score --batch <batch> --out results/summary/model_selection/<model>`; only those two rows changed (taxonomy CRASH → FORMAT). Correctness unchanged.
+- `kerala.bench.score` gained `--out` so per-model summaries do not overwrite `results/summary/`.

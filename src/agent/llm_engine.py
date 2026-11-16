@@ -27,6 +27,7 @@ text, prefixed with "Error during …", and the caller decides what to do with
 it (the product turns the first one into an aborted run rather than letting
 the loop retry blindly).
 """
+import json
 import os
 import random
 import re
@@ -72,6 +73,63 @@ def strip_reasoning(text: str) -> str:
     return text.strip()
 
 
+def _error_status_field(body: Any) -> Optional[str]:
+    """Return an explicit `status` field from an API error body, if present."""
+    if isinstance(body, list) and body:
+        body = body[0]
+    if not isinstance(body, dict):
+        return None
+    inner = body.get("error", body)
+    if isinstance(inner, dict) and isinstance(inner.get("status"), str):
+        return inner["status"]
+    return None
+
+
+def describe_api_error(exc: BaseException) -> Dict[str, Any]:
+    """Classify an API exception by type, HTTP status and explicit error field.
+
+    Kerala F7: a quota stop is recognised only from `openai.RateLimitError`, an
+    HTTP 429 status code, or an explicit `RESOURCE_EXHAUSTED` status field in the
+    error body. Message text is never searched, so a "429" that happens to occur
+    inside a timing number or a log line cannot be mistaken for a rate limit.
+    """
+    try:
+        from openai import RateLimitError
+    except ImportError:  # pragma: no cover - openai is a hard dependency here
+        RateLimitError = None
+    status_code = getattr(exc, "status_code", None)
+    status_field = _error_status_field(getattr(exc, "body", None))
+    quota = (
+        (RateLimitError is not None and isinstance(exc, RateLimitError))
+        or status_code == 429
+        or status_field == "RESOURCE_EXHAUSTED"
+    )
+    return {
+        "type": type(exc).__name__,
+        "status_code": status_code,
+        "status_field": status_field,
+        "quota": bool(quota),
+    }
+
+
+def react_text_from_tool_calls(tool_calls: Any) -> str:
+    """Render the first native tool call as `Action:`/`Args:` ReAct text."""
+    if not tool_calls:
+        return ""
+    call = tool_calls[0]
+    function = call.get("function") if isinstance(call, dict) else getattr(call, "function", None)
+    if function is None:
+        return ""
+    name = function.get("name") if isinstance(function, dict) else getattr(function, "name", None)
+    arguments = function.get("arguments") if isinstance(function, dict) else getattr(function, "arguments", None)
+    if not name:
+        return ""
+    if isinstance(arguments, dict):
+        arguments = json.dumps(arguments, ensure_ascii=False)
+    arguments = (arguments or "{}").strip() or "{}"
+    return f"Thought: (native tool call)\nAction: {name}\nArgs: {arguments}"
+
+
 class OpenAIEngine:
     """OpenAI Chat Completions, and anything that speaks the same protocol.
 
@@ -91,6 +149,7 @@ class OpenAIEngine:
         cost_per_m: tuple = (2.5, 10.0),  # (input_cost, output_cost) per 1M tokens
         seed: Optional[int] = None,
         request_timeout: float = 600,
+        reasoning_effort: Optional[str] = None,
     ):
         self.model_name = model
         self.api_key = api_key or os.environ.get("OPENAI_API_KEY", "")
@@ -100,7 +159,14 @@ class OpenAIEngine:
         self.cost_per_m = cost_per_m
         self.seed = seed
         self.request_timeout = request_timeout
+        # Kerala F8: optional reasoning level for local reasoning models
+        # (gpt-oss through Ollama accepts low/medium/high).
+        self.reasoning_effort = reasoning_effort
+        self.native_tool_calls = 0
         self.backoff_seconds = 0.0
+        # Kerala F7: structured error state (see describe_api_error).
+        self.last_error = None
+        self.quota_errors = 0
         self.client = None
 
         self._total_calls = 0
@@ -214,6 +280,8 @@ class OpenAIEngine:
                 )
             if self.seed is not None:
                 kwargs["seed"] = self.seed
+            if self.reasoning_effort:
+                kwargs["reasoning_effort"] = self.reasoning_effort
 
             retryable_errors = (
                 RateLimitError,
@@ -259,8 +327,17 @@ class OpenAIEngine:
                     raise
 
             # A thinking model sometimes comes back with no content at all.
-            raw_content = response.choices[0].message.content
+            message = response.choices[0].message
+            raw_content = message.content
             text = strip_reasoning(raw_content.strip()) if raw_content else ""
+            # Kerala F8: gpt-oss (Harmony) may answer with a native tool call,
+            # which Ollama returns in `tool_calls` with empty content. Re-express
+            # the first call in the ReAct text format. Separate reasoning fields
+            # (`reasoning`, `reasoning_content`, `thinking`) are never forwarded.
+            tool_text = react_text_from_tool_calls(getattr(message, "tool_calls", None))
+            if tool_text and "Action:" not in text:
+                text = tool_text
+                self.native_tool_calls += 1
             usage = response.usage
             output_tokens = usage.completion_tokens if usage else 0
             input_tokens = usage.prompt_tokens if usage else 0
@@ -274,8 +351,12 @@ class OpenAIEngine:
 
             # Hand the loop something parseable so it asks again rather than
             # crashing on an empty string.
+            # Kerala F8: no `Action:` line here. The old placeholder
+            # "Action: <newline>Args: {}" parsed as a call to an unknown tool
+            # named `Args` (the action regex skips the line break), instead of
+            # the format reminder the loop gives for an unparseable reply.
             if not text:
-                text = "Thought: (empty response from model)\nAction: \nArgs: {}"
+                text = "Thought: (empty response from model)"
 
             # Trim at the first stop sequence.
             if needs_manual_stop and stop:
@@ -302,6 +383,11 @@ class OpenAIEngine:
 
         except Exception as e:
             elapsed_ms = (time.time() - start) * 1000
+            # Kerala F7: keep a structured record of the failure so callers can
+            # tell a quota stop from any other error without searching text.
+            self.last_error = describe_api_error(e)
+            if self.last_error["quota"]:
+                self.quota_errors += 1
             return {
                 "text": f"Error during API call: {str(e)}",
                 "tokens_generated": 0,

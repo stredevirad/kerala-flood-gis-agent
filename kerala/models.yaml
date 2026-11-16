@@ -41,7 +41,8 @@ pc-gptoss20b:
   context: 16384
   temperature: 0
   seed: 1
-  max_tokens: 4096
+  max_tokens: 8192
+  reasoning_effort: low
   max_rounds: 16
   sandbox_timeout: 300
   context_chars: 24000

@@ -4,4 +4,4 @@ selection_pc_qwen35_9b,pc-qwen35-9b,P01,noparam,ok,True,False,False,0,0,"{""faci
 selection_pc_qwen35_9b,pc-qwen35-9b,P01,pack,ok,True,False,False,0,2,"{""facility_flood_buffer_m"": 250, ""facility_point_rule"": ""representative_point""}",True,False,True,True,False,5.8945,117629,finished,0.0,353.671,ok,,LOGIC
 selection_pc_qwen35_9b,pc-qwen35-9b,P06,inline,ok,False,False,False,0,0,{},False,False,False,False,False,3.3031,114674,finished,0.0,198.188,,,FORMAT
 selection_pc_qwen35_9b,pc-qwen35-9b,P06,noparam,ok,False,False,False,0,1,{},False,False,False,False,False,3.3586,112110,max_rounds,0.0,201.516,,,FORMAT
-selection_pc_qwen35_9b,pc-qwen35-9b,P06,pack,ok,False,False,False,0,4,{},False,False,False,False,False,2.2765,99456,paused_quota,0.0,136.593,,,CRASH
+selection_pc_qwen35_9b,pc-qwen35-9b,P06,pack,ok,False,False,False,0,4,{},False,False,False,False,False,2.2765,99456,finished,0.0,136.593,,,FORMAT
