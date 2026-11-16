@@ -446,3 +446,22 @@ Output: `35 passed in 2.04s`.
 - The Gemini OpenAI-compatible endpoint rejects `seed` for this model (HTTP 400 `Unknown name "seed"`), so `cloud-flashlite` no longer sends one; determinism relies on temperature 0. `rpm_limit: 8` is kept and now enforced per call.
 - **Exact cloud model ID: `gemini-3.5-flash-lite`** (echoed back as `model` in every response).
 - Cloud D01 × pack (`diag_cloud_d01`): finished, 3 rounds, 24.3 s, value 860 = gold 860 (correct).
+
+### §7.4 cloud floor (`floor_cloud`, gemini-3.5-flash-lite)
+
+- Command (detached, `Start-Process`, logs `logs/claude_runs/floor_cloud.{out,err}.log`): `.venv/Scripts/python.exe -u -m kerala.bench.run_bench --model cloud-flashlite --batch floor_cloud --questions P01,P06 --arms noparam,inline,pack --resume`. Frozen test passed before launch; the runner re-checks frozen layer hashes before and after every run.
+- Output tail: `done 1/6 P01/noparam: finished` … `done 5/6 P06/pack: max_rounds` / `done 6/6 P06/noparam: finished; ETA 0.0 min`. 0 quota errors; ~2 min per run.
+- Score: `.venv/Scripts/python.exe -m kerala.bench.score --batch floor_cloud --out results/summary/model_selection/cloud-flashlite` → `Scored 6 runs`. **1/6 correct_final** (P06/inline 57.25 vs 57.6 km², inside the 3 % tolerance); 0/6 correct_given_own_params. Below the 2/6 floor.
+
+### §7.3 answer-vs-gold diagnostics
+
+- Tool: `.venv/Scripts/python.exe -m kerala.tools.floor_diag --batches <batches> --p01-variants`, writing `results/summary/floor_diagnostics*.md/json`. It reuses the scorer's `collect()` and evaluates the independent gold function for P01 under every facility rule.
+- P01 gold under alternative rules: representative_point 250 m = 93, centroid 250 m = 93, **intersects 250 m = 96**, representative_point/centroid 500 m = 158, **intersects 500 m = 161**.
+- P01 misses, attributed:
+  - Gemini inline 96 and pack 96, Qwen 3.5 inline 96: exactly the `intersects` (whole-geometry) result at the correct 250 m. The models reported `representative_point` but tested the full hospital polygons → **method choice (facility rule)**, not execution or CRS. All worked in EPSG:32643.
+  - Qwen 3.5 noparam 161: exactly gold for `intersects` at 500 m. Its own parameters were `facility_point_rule: "buffer"` (not a valid rule name) and 500 m, so the scorer cannot accept them as defensible → **method choice (rule + distance)**; the GIS execution itself was right for what it chose.
+  - Qwen 3.5 pack 0: **execution** — `GeoSeries.within(GeoSeries)` aligns row-by-row by index instead of testing against the flood union, then the model hard-coded `value: 0`.
+  - Gemini noparam 2: chose `facility_flood_buffer_m: 0` and rule "intersect" → **method choice** (no buffer; question says "within the facility flood buffer"), plus an `execute` call without `code` along the way.
+- P06: Gemini noparam 28.52 vs 57.6 — chose `jrc_seasonality > 0` (removes all seasonal water, i.e. much of the flood) and slope 10° → **parameter choice**. Gemini pack hit max_rounds: five `execute` calls whose arguments were `geoprocess`/`finish` payloads (tool/argument mismatch; the parser then wrapped the JSON into `code` → `SyntaxError`); its round-9 summary claimed 201.59 km². The raw model reply is not stored in `trace.jsonl`, which limits this diagnosis (observability gap, noted for Phase 6). Qwen P06 runs produced no answer (GIS argument and code-format errors, as before).
+- Old gpt-oss runs (`selection_pc_gptoss20b`): no values; every run failed on the unknown tool `Args` (the F8 integration bug).
+- Qwen2.5-Coder:7B: run folders are not on this PC (`results/runs/` is git-ignored and was not copied from the laptop), so value-level diagnostics for it are **skipped**; its first-error table above stands.
