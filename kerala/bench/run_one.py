@@ -151,7 +151,7 @@ def run_one(qid: str, arm: str, model: str, out: Path, *, stub_mode: str = "ok")
         area_km2 = 4337.752  # externally supplied runtime guard, never included in the agent dataset/prompt
         agent = KeralaAgent(
             engine, question=question, arm=arm, data_text=build_data_text(), area_of_interest_km2=area_km2,
-            pack=pack, timeout=int(config.get("sandbox_timeout", 300)), max_rounds=int(config.get("max_rounds", 12)),
+            pack=pack, timeout=int(config.get("sandbox_timeout", 300)), max_rounds=int(config.get("max_rounds", 16)),
             context_chars=int(config.get("context_chars", 24000)), verbose=False,
         )
         result = agent.run(compose_task(question, arm, pack=pack), data_dir=str(LAYERS), work_dir=str(out), on_step=events.append)
@@ -164,12 +164,14 @@ def run_one(qid: str, arm: str, model: str, out: Path, *, stub_mode: str = "ok")
     _copy_required_outputs(out)
     elapsed = time.monotonic() - started
     stats = engine.get_stats()
+    completion_tokens = int(stats.get("total_output_tokens", 0))
+    llm_seconds = float(stats.get("total_time_ms", 0.0)) / 1000.0
     text = caught + "\n" + "\n".join(json.dumps(event) for event in events)
     if "429" in text or "RESOURCE_EXHAUSTED" in text:
         reason = "paused_quota"
     elif caught:
         reason = "error"
-    elif result is not None and result.total_rounds >= int(config.get("max_rounds", 12)) and not result.success:
+    elif result is not None and result.total_rounds >= int(config.get("max_rounds", 16)) and not result.success:
         reason = "max_rounds"
     else:
         reason = "finished"
@@ -178,7 +180,9 @@ def run_one(qid: str, arm: str, model: str, out: Path, *, stub_mode: str = "ok")
         "model_digest": _ollama_digest(config) if config.get("provider") == "ollama" else config.get("model"),
         "arm": arm, "qid": qid, "rounds": getattr(result, "total_rounds", 0),
         "llm_calls": stats.get("total_calls", 0), "prompt_tokens": stats.get("prompt_tokens", 0),
-        "completion_tokens": stats.get("total_output_tokens", 0), "max_prompt_tokens": max_prompt_tokens,
+        "completion_tokens": completion_tokens,
+        "tokens_per_second": round(completion_tokens / llm_seconds, 2) if llm_seconds > 0 else None,
+        "context": config.get("context"), "max_prompt_tokens": max_prompt_tokens,
         "wall_seconds": round(elapsed, 3), "backoff_seconds": float(getattr(engine, "backoff_seconds", 0.0)),
         "exit_reason": reason, "error": caught or None, "git_commit": _git_commit(),
         "pack_hash": _sha256(ROOT / "kerala" / "pack" / "kerala_pack.yaml"),

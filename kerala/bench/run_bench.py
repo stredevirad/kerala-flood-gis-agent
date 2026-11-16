@@ -4,9 +4,11 @@
 from __future__ import annotations
 
 import argparse
+import ctypes
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -23,6 +25,61 @@ FROZEN = BENCH / "frozen.json"
 LAYERS = ROOT / "data" / "kerala" / "layers"
 QUESTIONS = BENCH / "questions.yaml"
 RUNS_ROOT = ROOT / "results" / "runs"
+
+
+def _resource_snapshot() -> dict[str, float | None]:
+    """Sample system RAM and NVIDIA memory use for an active run."""
+    snapshot: dict[str, float | None] = {
+        "peak_system_ram_gb": None,
+        "peak_vram_used_mib": None,
+    }
+    if os.name == "nt":
+        try:
+            class MemoryStatusEx(ctypes.Structure):
+                _fields_ = [
+                    ("dwLength", ctypes.c_ulong),
+                    ("dwMemoryLoad", ctypes.c_ulong),
+                    ("ullTotalPhys", ctypes.c_ulonglong),
+                    ("ullAvailPhys", ctypes.c_ulonglong),
+                    ("ullTotalPageFile", ctypes.c_ulonglong),
+                    ("ullAvailPageFile", ctypes.c_ulonglong),
+                    ("ullTotalVirtual", ctypes.c_ulonglong),
+                    ("ullAvailVirtual", ctypes.c_ulonglong),
+                    ("ullAvailExtendedVirtual", ctypes.c_ulonglong),
+                ]
+
+            status = MemoryStatusEx()
+            status.dwLength = ctypes.sizeof(status)
+            if ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(status)):
+                snapshot["peak_system_ram_gb"] = round(
+                    (status.ullTotalPhys - status.ullAvailPhys) / (1024 ** 3), 2
+                )
+        except Exception:
+            pass
+    nvidia_smi = shutil.which("nvidia-smi")
+    if nvidia_smi:
+        try:
+            completed = subprocess.run(
+                [nvidia_smi, "--query-gpu=memory.used", "--format=csv,noheader,nounits"],
+                capture_output=True, text=True, timeout=3, check=False,
+            )
+            if completed is not None and getattr(completed, "returncode", 1) == 0:
+                values = [
+                    int(line.strip())
+                    for line in completed.stdout.splitlines()
+                    if line.strip().isdigit()
+                ]
+                if values:
+                    snapshot["peak_vram_used_mib"] = float(max(values))
+        except Exception:
+            pass
+    return snapshot
+
+
+def _update_peaks(peaks: dict[str, float | None], sample: dict[str, float | None]) -> None:
+    for key, value in sample.items():
+        if value is not None and (peaks[key] is None or value > peaks[key]):
+            peaks[key] = value
 
 
 def _sha256(path: Path) -> str:
@@ -125,6 +182,12 @@ def run_batch(model: str, batch: str, questions: str, arms: str, *, resume: bool
         flags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
         process = subprocess.Popen(command, cwd=ROOT, creationflags=flags)
         limit = float(config.get("wall_clock_seconds", 1500))
+        resource_peaks: dict[str, float | None] = {
+            "peak_system_ram_gb": None,
+            "peak_vram_used_mib": None,
+        }
+        _update_peaks(resource_peaks, _resource_snapshot())
+        last_resource_sample = time.monotonic()
         while process.poll() is None:
             heartbeat = path / "heartbeat.json"
             extra = 0.0
@@ -137,12 +200,19 @@ def run_batch(model: str, batch: str, questions: str, arms: str, *, resume: bool
                 subprocess.run(["taskkill", "/PID", str(process.pid), "/T", "/F"], check=False, capture_output=True)
                 _timeout_meta(path, qid, arm, model, time.monotonic() - start)
                 break
+            if time.monotonic() - last_resource_sample >= 1.0:
+                _update_peaks(resource_peaks, _resource_snapshot())
+                last_resource_sample = time.monotonic()
             time.sleep(0.1)
+        _update_peaks(resource_peaks, _resource_snapshot())
         wall = time.monotonic() - start
         verify_frozen_layers()
         elapsed_samples.append(wall)
         meta_path = path / "meta.json"
         meta = json.loads(meta_path.read_text(encoding="utf-8")) if meta_path.is_file() else {"exit_reason": "error"}
+        meta.update(resource_peaks)
+        if meta_path.is_file():
+            meta_path.write_text(json.dumps(meta, indent=2) + "\n", encoding="utf-8")
         quota_streak = quota_streak + 1 if meta.get("exit_reason") == "paused_quota" else 0
         remaining = len(plan) - index
         eta = (sum(elapsed_samples) / len(elapsed_samples) * remaining) if elapsed_samples else 0

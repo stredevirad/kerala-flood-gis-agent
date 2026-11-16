@@ -44,17 +44,28 @@ _THINK_BLOCK = re.compile(r"<think>.*?</think>", re.S | re.I)
 
 def strip_reasoning(text: str) -> str:
     """Drop a leading reasoning block, keeping only what follows it."""
-    if not text or "think>" not in text.lower():
+    if not text:
         return text
-    text = _THINK_BLOCK.sub("", text)
     low = text.lower()
-    # Some servers emit the closing tag only, having eaten the opening one.
-    if "</think>" in low:
-        text = text[low.rindex("</think>") + len("</think>"):]
-    # An unclosed block means the reply ran out of room mid-thought: there is no
-    # answer in it, and passing the raw monologue on would only confuse the loop.
-    elif "<think>" in low:
-        text = text[:low.index("<think>")]
+    if "think>" in low:
+        text = _THINK_BLOCK.sub("", text)
+        low = text.lower()
+        # Some servers emit the closing tag only, having eaten the opening one.
+        if "</think>" in low:
+            text = text[low.rindex("</think>") + len("</think>"):]
+        # An unclosed block means the reply ran out of room mid-thought: there is no
+        # answer in it, and passing the raw monologue on would only confuse the loop.
+        elif "<think>" in low:
+            text = text[:low.index("<think>")]
+
+    # A few OpenAI-compatible adapters expose Harmony channel markers in the
+    # content string. Keep only the final channel when analysis text is present.
+    low = text.lower()
+    if "<|channel|>analysis" in low:
+        final_start = low.rfind("<|channel|>final")
+        if final_start == -1:
+            return ""
+        text = text[final_start + len("<|channel|>final"):]
     return text.strip()
 
 

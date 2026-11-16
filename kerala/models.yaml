@@ -3,10 +3,11 @@ local-qwen7b:
   base_url: http://localhost:11434/v1
   model: gisclaw-qwen7b-16k
   api_key: ollama
+  context: 16384
   temperature: 0
   seed: 1
   max_tokens: 1536
-  max_rounds: 12
+  max_rounds: 16
   sandbox_timeout: 300
   context_chars: 24000
   wall_clock_seconds: 1500
@@ -18,7 +19,7 @@ cloud-flashlite:
   temperature: 0
   seed: 1
   max_tokens: 1536
-  max_rounds: 12
+  max_rounds: 16
   sandbox_timeout: 300
   context_chars: 24000
   wall_clock_seconds: 1500
@@ -32,3 +33,29 @@ stub:
   sandbox_timeout: 5
   context_chars: 4000
   wall_clock_seconds: 10
+pc-gptoss20b:
+  provider: ollama
+  base_url: http://localhost:11434/v1
+  model: gpt-oss:20b
+  api_key: ollama
+  context: 16384
+  temperature: 0
+  seed: 1
+  max_tokens: 4096
+  max_rounds: 16
+  sandbox_timeout: 300
+  context_chars: 24000
+  wall_clock_seconds: 1500
+pc-qwen35-9b:
+  provider: ollama
+  base_url: http://localhost:11434/v1
+  model: qwen3.5:9b
+  api_key: ollama
+  context: 16384
+  temperature: 0
+  seed: 1
+  max_tokens: 4096
+  max_rounds: 16
+  sandbox_timeout: 300
+  context_chars: 24000
+  wall_clock_seconds: 1500

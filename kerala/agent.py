@@ -275,7 +275,7 @@ class KeralaAgent(GISReActAgent):
         area_of_interest_km2: float,
         pack: Mapping[str, Any] | None = None,
         timeout: int = 300,
-        max_rounds: int = 12,
+        max_rounds: int = 16,
         context_chars: int = 24_000,
         verbose: bool = False,
         extra_tools: dict | None = None,
