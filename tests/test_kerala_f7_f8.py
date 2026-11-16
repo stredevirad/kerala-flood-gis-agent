@@ -55,14 +55,19 @@ def test_stub_quota_engine_is_labelled_paused_quota(tmp_path):
     assert meta["quota_errors"] >= 1
 
 
+QUOTA = {"type": "RateLimitError", "status_code": 429, "status_field": None, "quota": True}
+SERVER = {"type": "InternalServerError", "status_code": 503, "status_field": None, "quota": False}
+
+
 @pytest.mark.parametrize(
     "kwargs, expected",
     [
-        ({"quota_errors": 0, "exception": None, "rounds": 3, "success": True}, "finished"),
-        ({"quota_errors": 0, "exception": None, "rounds": 16, "success": False}, "max_rounds"),
-        ({"quota_errors": 0, "exception": None, "rounds": 16, "success": True}, "finished"),
-        ({"quota_errors": 0, "exception": ValueError("took 429 ms"), "rounds": 0, "success": None}, "error"),
-        ({"quota_errors": 2, "exception": None, "rounds": 4, "success": False}, "paused_quota"),
+        ({"last_error": None, "exception": None, "rounds": 3, "success": True}, "finished"),
+        ({"last_error": None, "exception": None, "rounds": 16, "success": False}, "max_rounds"),
+        ({"last_error": None, "exception": None, "rounds": 16, "success": True}, "finished"),
+        ({"last_error": None, "exception": ValueError("took 429 ms"), "rounds": 0, "success": None}, "error"),
+        ({"last_error": QUOTA, "exception": None, "rounds": 4, "success": False}, "paused_quota"),
+        ({"last_error": SERVER, "exception": None, "rounds": 4, "success": False}, "error"),
     ],
 )
 def test_classify_exit_uses_structured_signals(kwargs, expected):
@@ -71,7 +76,49 @@ def test_classify_exit_uses_structured_signals(kwargs, expected):
 
 def test_classify_exit_recognises_rate_limit_exception():
     exc = _status_error(RateLimitError, 429)
-    assert classify_exit(quota_errors=0, exception=exc, rounds=0, success=None, max_rounds=16) == "paused_quota"
+    assert classify_exit(last_error=None, exception=exc, rounds=0, success=None, max_rounds=16) == "paused_quota"
+
+
+def _ok_response(text="Thought: t\nAction: finish\nArgs: {}"):
+    message = SimpleNamespace(content=text, tool_calls=None)
+    usage = SimpleNamespace(prompt_tokens=10, completion_tokens=5, prompt_tokens_details=None)
+    return SimpleNamespace(choices=[SimpleNamespace(message=message, finish_reason="stop")], usage=usage)
+
+
+def test_recovered_rate_limit_does_not_mark_the_run(monkeypatch):
+    """A 429 whose retries ran out, followed by a successful call, ends as finished."""
+    monkeypatch.setattr("src.agent.llm_engine.time.sleep", lambda _s: None)
+    rate_limit = _status_error(RateLimitError, 429)
+    state = {"n": 0}
+
+    def create(**_kwargs):
+        state["n"] += 1
+        if state["n"] <= 6:  # exhausts all six attempts of the first generate()
+            raise rate_limit
+        return _ok_response()
+
+    engine = _engine_with(create)
+    assert engine.generate("p")["text"].startswith("Error during API call")
+    assert engine.last_error["quota"] is True
+    engine.generate("p")
+    assert engine.last_error is None
+    assert engine.quota_errors == 1  # still counted for the record
+    reason = classify_exit(last_error=engine.last_error, exception=None, rounds=3, success=True, max_rounds=16)
+    assert reason == "finished"
+
+
+def test_run_ending_on_server_errors_is_error(monkeypatch):
+    monkeypatch.setattr("src.agent.llm_engine.time.sleep", lambda _s: None)
+    server = _status_error(InternalServerError, 503, message="overloaded")
+
+    def create(**_kwargs):
+        raise server
+
+    engine = _engine_with(create)
+    engine.generate("p")
+    assert engine.last_error["quota"] is False
+    reason = classify_exit(last_error=engine.last_error, exception=None, rounds=3, success=False, max_rounds=16)
+    assert reason == "error"
 
 
 def test_describe_api_error_classifies_by_type_status_and_explicit_field():

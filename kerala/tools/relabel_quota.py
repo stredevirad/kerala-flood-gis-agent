@@ -37,7 +37,7 @@ def relabel(batch_root: Path, apply: bool) -> list[tuple[Path, str, str]]:
             continue  # a recorded exception needs a human look; leave it alone
         max_rounds = int(model_config(meta["model_name"]).get("max_rounds", 16))
         new = classify_exit(
-            quota_errors=int(meta.get("quota_errors", 0) or 0), exception=None,
+            last_error=meta.get("last_api_error"), exception=None,
             rounds=int(meta.get("rounds", 0) or 0), success=_success(meta_path.parent), max_rounds=max_rounds,
         )
         if new == "paused_quota":

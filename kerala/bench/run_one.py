@@ -31,6 +31,7 @@ class StubEngine:
         self.mode = mode
         self.backoff_seconds = 0.0
         self.quota_errors = 0
+        self.last_error: dict[str, Any] | None = None
         self._calls = 0
 
     def load_model(self) -> bool:
@@ -40,6 +41,7 @@ class StubEngine:
         self._calls += 1
         if self.mode == "quota":
             self.quota_errors += 1
+            self.last_error = {"type": "RateLimitError", "status_code": 429, "status_field": "RESOURCE_EXHAUSTED", "quota": True}
             return {"text": "Error during API call: 429 RESOURCE_EXHAUSTED", "tokens_generated": 0, "latency_ms": 1}
         if self.mode == "sleep":
             time.sleep(30)
@@ -115,18 +117,21 @@ def _is_quota_exception(exc: BaseException | None) -> bool:
     return bool(describe_api_error(exc)["quota"])
 
 
-def classify_exit(*, quota_errors: int, exception: BaseException | None, rounds: int,
+def classify_exit(*, last_error: dict[str, Any] | None, exception: BaseException | None, rounds: int,
                   success: bool | None, max_rounds: int) -> str:
     """Label how a run ended from structured signals only.
 
-    A quota stop needs a structured signal: the engine counted a quota error
-    (RateLimitError, HTTP 429 or an explicit RESOURCE_EXHAUSTED field), or the
-    run raised such an exception. Trace and log text is never searched, which
-    fixes the earlier false positives where "429" occurred inside `gen_time_ms`.
+    `last_error` is the engine's record of its most recent call; a successful
+    call clears it, so it is set only when the run ended on a failed API call.
+    That error (or a raised exception) is a quota stop only when it is a
+    RateLimitError, HTTP 429 or an explicit RESOURCE_EXHAUSTED field. Trace and
+    log text is never searched, which fixes the earlier false positives where
+    "429" occurred inside `gen_time_ms`. A 429 that was later recovered from
+    does not mark the run.
     """
-    if quota_errors > 0 or _is_quota_exception(exception):
+    if (last_error and last_error.get("quota")) or _is_quota_exception(exception):
         return "paused_quota"
-    if exception is not None:
+    if last_error or exception is not None:
         return "error"
     if rounds >= max_rounds and not success:
         return "max_rounds"
@@ -222,7 +227,7 @@ def run_one(qid: str, arm: str, model: str, out: Path, *, stub_mode: str = "ok")
     llm_seconds = float(stats.get("total_time_ms", 0.0)) / 1000.0
     quota_errors = int(getattr(engine, "quota_errors", 0) or 0)
     reason = classify_exit(
-        quota_errors=quota_errors, exception=caught_exc,
+        last_error=getattr(engine, "last_error", None), exception=caught_exc,
         rounds=int(getattr(result, "total_rounds", 0) or 0),
         success=getattr(result, "success", None),
         max_rounds=int(config.get("max_rounds", 16)),

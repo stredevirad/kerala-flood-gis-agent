@@ -327,6 +327,9 @@ class OpenAIEngine:
                     raise
 
             # A thinking model sometimes comes back with no content at all.
+            # Kerala F7: a successful call clears the error state, so callers
+            # can tell how a run ended rather than whether it ever hit an error.
+            self.last_error = None
             message = response.choices[0].message
             raw_content = message.content
             text = strip_reasoning(raw_content.strip()) if raw_content else ""
