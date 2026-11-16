@@ -1,5 +1,25 @@
 # PROGRESS
-## Status: Phase 5 STOP gate reached after F6 rerun; floor check 0/6; matrix not started
+## Status: Phase 5 PC model-selection pilots in progress; original Qwen 7B floor was 0/6; matrix not started
+
+## Model selection
+
+### Qwen2.5-Coder:7B — below the floor
+
+- The original nine approved smoke runs were D01–D03 × pack plus P01/P06 × all three arms. D01 and D02 passed; D03 was format-invalid. The six floor cells scored 0/6 `correct_final` and 0/6 `correct_given_own_params`, below the 2/6 rule.
+- Failure modes were repeated GIS argument errors: `clip` lacked `overlay`, `attribute_join` lacked `layer`, P01/noparam's `buffer` call exceeded 300 s, P06/pack used an unknown `threshold` operation, and P01/inline returned `cannot_answer` for an answerable question. The complete nine-row table is under Phase 5 execution below.
+- Kirito authorized a PC-only candidate selection with the same P01/P06 questions and unchanged floor: run `pc-gptoss20b` first, and run `pc-qwen35-9b` only if the first candidate scores fewer than 2/6. Stop after selection; no matrix run is authorized here.
+
+## Current PC setup and verification
+
+- PC: NVIDIA GeForce RTX 4060 Laptop GPU, 8,188 MiB VRAM, driver 591.66; 24 GB system RAM.
+- Installed uv 0.13.8 and Ollama 0.40.16 with winget. Python 3.11 was present; `uv python install 3.11` and the Phase 0 venv build completed in the background. Venv reports Python 3.11.18. Logs: `logs/machine_setup/`.
+- Set user `OLLAMA_CONTEXT_LENGTH=16384` before Ollama was installed/launched. Confirm the loaded context and CUDA backend during the model-selection run.
+- `powercfg /change standby-timeout-ac 0` was applied. AC sleep was already Never (index 0); restore to the original value with the same command: `powercfg /change standby-timeout-ac 0`.
+- Frozen check command: `\.venv\Scripts\python.exe -m pytest -q tests\test_kerala_frozen.py`; output: `1 passed in 0.75s`.
+- Reapplied read-only attributes with `attrib +R data\kerala\layers\*`; all nine top-level layer files show `ReadOnly`.
+- Phase 5 acceptance command: `\.venv\Scripts\python.exe -m pytest -q tests\test_kerala_harness.py tests\test_kerala_frozen.py`; last output lines: `....... [100%]` / `7 passed in 10.58s`.
+- Full Kerala suite command: `$keralaTests = Get-ChildItem -LiteralPath tests -Filter 'test_kerala_*.py' | Sort-Object Name | ForEach-Object { $_.FullName }; & .\.venv\Scripts\python.exe -m pytest -q $keralaTests`; last output lines: `.............................................. [100%]` / `46 passed in 8.21s`.
+
 ## Checklist
 - [x] Phase 0
   - [x] 0.1 git init + .gitignore + upstream snapshot commit
@@ -47,6 +67,7 @@
   - [x] Approved smoke runs only
   - [x] Rerun D01–D03 development smoke and unchanged P01/P06 floor check
   - [x] Apply floor rule: 0/6; STOP before matrix
+  - [ ] User-authorized PC model-selection pilot(s), same P01/P06 floor rule; stop before matrix
 - [ ] Phase 6 — score, analyse, write
   - [ ] Score matrix and inspect at least 10 failed traces
   - [ ] Draft REPORT.md
@@ -93,6 +114,7 @@ All runs used GISReActAgent on examples\urban-heat-madison, task "Compute the me
 - Python timing output used PYTHONIOENCODING=utf-8 after GISclaw progress output failed under cp1252.
 - F6 (documented upstream issue): GISclaw's `app.runner.DATA_BLOCK` says the layer listing is complete for `data/`, and `app.data_profile` renders bare layer names, while the GISReActAgent exposes files under `dataset/<name>`. Kerala now prefixes each profile listing path with `dataset/` and includes identical input/output path guidance plus an `execute`/`json.dump` example in every arm's answer contract. The upstream mismatch is documented only; `app/` and `src/` remain untouched.
 - Whole-system RAM was sampled because the Ollama model runner shares the Intel Arc system memory; Python-process memory alone is not representative.
+- Kirito authorized a pre-matrix PC model-selection pilot after the original Qwen2.5-Coder:7B floor scored 0/6. Real benchmark models now use `max_rounds=16` in every arm; the offline `stub` remains at 2 rounds for its bounded harness tests. The runner records output tokens/s and samples system RAM and NVIDIA VRAM while each isolated run is active.
 - Earlier, Kirito approved rebuilding only the Sentinel-1 VV mosaic and selecting KI if its range/agreement gate passed; the subsequent decision below supersedes KI as the selected method. Otsu and KI remain diagnostics.
 - Kirito superseded the KI-gated threshold selection after reviewing the histogram: choose T=-14.0 dB from T_valley=-13.95 dB using conventional half-up rounding. T_ki=-12.55 dB missed the prior range by 0.45 dB; the water/land trough is selected because the seasonality 1–9 flooded-vegetation tail biases Otsu and breaks KI's Gaussian-class assumption. Keep the [-22,-13] plausible range and all rubric ranges unchanged. Pack provenance is updated as instructed. This is a post-hoc threshold choice to describe in REPORT.md during Phase 6.
 - Kirito revised the Phase 4 facility definition before approval: a facility is flood-affected when its selected representative point/centroid, or its polygon under `intersects`, lies within a 250 m buffer of the detected flood extent. The new project-convention pack key is `facility_flood_buffer_m`, with a 50–1,000 m defensible range and 100/250/500 m sensitivity.
@@ -320,6 +342,10 @@ Last output:
 - A first scheduler invocation briefly selected D01/noparam by mistake. It was terminated before the Ollama server was started, produced no `meta.json` or trace, and is excluded from the nine approved runs.
 - D01 and D02 were format-valid and correct. D03 was format-invalid. On the unchanged six-cell floor, no run was correct: `correct_final=0/6`, `correct_given_own_params=0/6`. This fails the >=2/6 requirement and triggers the Phase 5 STOP gate; no matrix was run.
 - Largest per-call prompt was 8,270 tokens (P06/inline), below 14,500. Development-smoke times were D01 4.84, D02 5.17, D03 5.28 minutes. Floor times were P01/noparam 24.60, P01/inline 14.37, P01/pack 10.01, P06/inline 13.55, P06/pack 8.30, P06/noparam 6.85 minutes.
+
+### Model selection: Qwen2.5-Coder:7B — below the floor
+
+These are the nine original smoke runs; the failure modes show that the below-floor result reflects a mix of output format, GIS argument, timeout, and answer refusal failures.
 
 | QID / arm | exit_reason | format_ok | correct_final | correct_given_own_params | rounds | minutes | First error in trace, if failed |
 |---|---|---:|---:|---:|---:|---:|---|

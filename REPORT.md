@@ -10,9 +10,13 @@ Kerala's local mitigation prefixes every layer path in the data profile with `da
 
 The exact P01/noparam system prompt and task used for the approved rerun are preserved at `results/_profile/example_prompt_P01_noparam.txt`. It was rendered before the model batch and confirmed to contain the `dataset/` paths.
 
-## F6 smoke rerun notes and Phase 5 STOP
+## Model selection
 
-After the Kerala-only prompt correction, the approved local development batch (D01–D03, pack) and unchanged floor batch (P01/P06, all arms) completed. Cloud smoke was skipped as requested because `kerala/.env` does not exist. D01 and D02 were correct; D03 failed output format. The six floor cells produced 0/6 `correct_final` and 0/6 `correct_given_own_params`, below the unchanged 2/6 floor, so the matrix was not run.
+### Qwen2.5-Coder:7B — below the floor
+
+After the Kerala-only prompt correction, the approved local development batch (D01–D03, pack) and unchanged floor batch (P01/P06, all arms) completed on the original `qwen2.5-coder:7b` model. D01 and D02 were correct; D03 failed output format. The six floor cells produced 0/6 `correct_final` and 0/6 `correct_given_own_params`, below the unchanged 2/6 floor, so the matrix was not run. Across the nine runs, first failures included a 300 s `buffer` timeout, `clip` calls missing `overlay`, `attribute_join` calls missing `layer`, an unsupported `threshold` operation, and a `cannot_answer` refusal on answerable P01/inline.
+
+The detailed nine-run table follows.
 
 | QID / arm | exit_reason | format_ok | correct_final | correct_given_own_params | rounds | minutes | First trace error, if failed |
 |---|---|---:|---:|---:|---:|---:|---|
