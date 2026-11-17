@@ -1,0 +1,102 @@
+[
+  {
+    "model": "pc-gptoss20b",
+    "qid": "P01",
+    "arm": "inline",
+    "exit_reason": "finished",
+    "format_ok": true,
+    "correct_final": false,
+    "correct_given_own_params": false,
+    "value": 0,
+    "gold": 93,
+    "parameters_used": {
+      "facility_point_rule": "representative_point",
+      "facility_flood_buffer_m": 250
+    },
+    "first_error": "r2 `geoprocess`: \u274c Tool 'geoprocess' argument error: GISToolkit.geoprocess() got an unexpected keyword argument 'path'",
+    "rounds": 16
+  },
+  {
+    "model": "pc-gptoss20b",
+    "qid": "P01",
+    "arm": "noparam",
+    "exit_reason": "finished",
+    "format_ok": false,
+    "correct_final": false,
+    "correct_given_own_params": false,
+    "value": null,
+    "gold": 93,
+    "parameters_used": null,
+    "first_error": "r2 `geoprocess`: \u274c Unknown geoprocess op 'list_files'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cent",
+    "rounds": 6
+  },
+  {
+    "model": "pc-gptoss20b",
+    "qid": "P01",
+    "arm": "pack",
+    "exit_reason": "finished",
+    "format_ok": true,
+    "correct_final": false,
+    "correct_given_own_params": false,
+    "value": 86,
+    "gold": 93,
+    "parameters_used": {
+      "facility_flood_buffer_m": 250,
+      "facility_point_rule": "representative_point"
+    },
+    "first_error": "r7 `geoprocess`: \u274c Tool 'geoprocess' argument error: GISToolkit.geoprocess() got an unexpected keyword argument 'path'",
+    "rounds": 16
+  },
+  {
+    "model": "pc-gptoss20b",
+    "qid": "P06",
+    "arm": "inline",
+    "exit_reason": "finished",
+    "format_ok": true,
+    "correct_final": true,
+    "correct_given_own_params": false,
+    "value": 57.254,
+    "gold": 57.6,
+    "parameters_used": {
+      "water_threshold_vv_db": -14.0,
+      "permanent_water_rule": "jrc_seasonality >= 10",
+      "max_flood_slope_deg": 5,
+      "raster_area_rule": "pixel_count * 900 m2"
+    },
+    "first_error": "r1 `execute`: \u274c Execution failed",
+    "rounds": 3
+  },
+  {
+    "model": "pc-gptoss20b",
+    "qid": "P06",
+    "arm": "noparam",
+    "exit_reason": "finished",
+    "format_ok": false,
+    "correct_final": false,
+    "correct_given_own_params": false,
+    "value": null,
+    "gold": 57.6,
+    "parameters_used": null,
+    "first_error": "r4 `geoprocess`: \u274c geoprocess 'clip' is missing a required input/param: 'overlay'. Expected: inputs.overlay = mask layer",
+    "rounds": 16
+  },
+  {
+    "model": "pc-gptoss20b",
+    "qid": "P06",
+    "arm": "pack",
+    "exit_reason": "finished",
+    "format_ok": true,
+    "correct_final": true,
+    "correct_given_own_params": false,
+    "value": 57.221,
+    "gold": 57.6,
+    "parameters_used": {
+      "water_threshold_vv_db": -14.0,
+      "permanent_water_rule": "jrc_seasonality >= 10",
+      "max_flood_slope_deg": 5,
+      "raster_area_rule": "pixel_count * 900 m2, pixel centre inside zone"
+    },
+    "first_error": "r3 `commentary`: \u274c Unknown tool 'commentary'. Available tools: list_files, load_vector, load_raster, geoprocess, execute, inspe",
+    "rounds": 13
+  }
+]

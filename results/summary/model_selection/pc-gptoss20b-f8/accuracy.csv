@@ -2,6 +2,6 @@ qid,arm,n,accuracy
 P01,inline,1,0.0
 P01,noparam,1,0.0
 P01,pack,1,0.0
-P06,inline,1,0.0
+P06,inline,1,1.0
 P06,noparam,1,0.0
 P06,pack,1,1.0

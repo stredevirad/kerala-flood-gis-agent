@@ -1,0 +1,282 @@
+[
+  {
+    "model": "cloud-flashlite",
+    "qid": "P01",
+    "arm": "inline",
+    "exit_reason": "finished",
+    "format_ok": true,
+    "correct_final": false,
+    "correct_given_own_params": false,
+    "value": 96,
+    "gold": 93,
+    "parameters_used": {
+      "facility_point_rule": "representative_point geometry rule",
+      "facility_flood_buffer_m": 250
+    },
+    "first_error": "r6 `execute`: \u274c Execution failed",
+    "rounds": 9
+  },
+  {
+    "model": "cloud-flashlite",
+    "qid": "P01",
+    "arm": "noparam",
+    "exit_reason": "finished",
+    "format_ok": true,
+    "correct_final": false,
+    "correct_given_own_params": false,
+    "value": 2,
+    "gold": 93,
+    "parameters_used": {
+      "facility_point_rule": "intersect",
+      "facility_flood_buffer_m": 0.0
+    },
+    "first_error": "r5 `execute`: \u274c Tool 'execute' argument error: GISToolkit.execute_code() missing 1 required positional argument: 'code'",
+    "rounds": 8
+  },
+  {
+    "model": "cloud-flashlite",
+    "qid": "P01",
+    "arm": "pack",
+    "exit_reason": "finished",
+    "format_ok": true,
+    "correct_final": false,
+    "correct_given_own_params": false,
+    "value": 96,
+    "gold": 93,
+    "parameters_used": {
+      "facility_point_rule": "representative_point",
+      "facility_flood_buffer_m": 250
+    },
+    "first_error": "r7 `execute`: \u274c Execution failed",
+    "rounds": 11
+  },
+  {
+    "model": "cloud-flashlite",
+    "qid": "P06",
+    "arm": "inline",
+    "exit_reason": "finished",
+    "format_ok": true,
+    "correct_final": true,
+    "correct_given_own_params": false,
+    "value": 57.25,
+    "gold": 57.6,
+    "parameters_used": {
+      "water_threshold_vv_db": -14.0,
+      "permanent_water_rule": "jrc_seasonality >= 10",
+      "max_flood_slope_deg": 5.0,
+      "raster_area_rule": "pixel_count * 900 m2, pixel centre inside zone area rule"
+    },
+    "first_error": "r6 `geoprocess`: \u274c Tool 'geoprocess' argument error: GISToolkit.geoprocess() missing 1 required positional argument: 'op'",
+    "rounds": 12
+  },
+  {
+    "model": "cloud-flashlite",
+    "qid": "P06",
+    "arm": "noparam",
+    "exit_reason": "finished",
+    "format_ok": true,
+    "correct_final": false,
+    "correct_given_own_params": false,
+    "value": 28.52,
+    "gold": 57.6,
+    "parameters_used": {
+      "water_threshold_vv_db": -14.0,
+      "permanent_water_rule": "jrc_seasonality > 0",
+      "max_flood_slope_deg": 10,
+      "raster_area_rule": "pixel_count * 900 m2"
+    },
+    "first_error": "r8 `execute`: \u274c Execution failed",
+    "rounds": 10
+  },
+  {
+    "model": "cloud-flashlite",
+    "qid": "P06",
+    "arm": "pack",
+    "exit_reason": "max_rounds",
+    "format_ok": false,
+    "correct_final": false,
+    "correct_given_own_params": false,
+    "value": null,
+    "gold": 57.6,
+    "parameters_used": null,
+    "first_error": "r5 `execute`: \u274c Execution failed",
+    "rounds": 16
+  },
+  {
+    "model": "pc-qwen35-9b",
+    "qid": "P01",
+    "arm": "inline",
+    "exit_reason": "finished",
+    "format_ok": true,
+    "correct_final": false,
+    "correct_given_own_params": false,
+    "value": 96,
+    "gold": 93,
+    "parameters_used": {
+      "facility_point_rule": "representative_point",
+      "facility_flood_buffer_m": 250
+    },
+    "first_error": "r12 `execute`: \u274c Execution failed",
+    "rounds": 16
+  },
+  {
+    "model": "pc-qwen35-9b",
+    "qid": "P01",
+    "arm": "noparam",
+    "exit_reason": "finished",
+    "format_ok": true,
+    "correct_final": false,
+    "correct_given_own_params": false,
+    "value": 161,
+    "gold": 93,
+    "parameters_used": {
+      "facility_point_rule": "buffer",
+      "facility_flood_buffer_m": 500
+    },
+    "first_error": "r8 `execute`: \u274c Execution failed",
+    "rounds": 16
+  },
+  {
+    "model": "pc-qwen35-9b",
+    "qid": "P01",
+    "arm": "pack",
+    "exit_reason": "finished",
+    "format_ok": true,
+    "correct_final": false,
+    "correct_given_own_params": false,
+    "value": 0,
+    "gold": 93,
+    "parameters_used": {
+      "facility_point_rule": "representative_point",
+      "facility_flood_buffer_m": 250
+    },
+    "first_error": "r7 `execute`: \u274c Execution failed",
+    "rounds": 16
+  },
+  {
+    "model": "pc-qwen35-9b",
+    "qid": "P06",
+    "arm": "inline",
+    "exit_reason": "finished",
+    "format_ok": false,
+    "correct_final": false,
+    "correct_given_own_params": false,
+    "value": null,
+    "gold": 57.6,
+    "parameters_used": null,
+    "first_error": "r6 `geoprocess`: \u274c geoprocess 'select' is missing a required input/param: 'layer'. Expected: expression",
+    "rounds": 16
+  },
+  {
+    "model": "pc-qwen35-9b",
+    "qid": "P06",
+    "arm": "noparam",
+    "exit_reason": "max_rounds",
+    "format_ok": false,
+    "correct_final": false,
+    "correct_given_own_params": false,
+    "value": null,
+    "gold": 57.6,
+    "parameters_used": null,
+    "first_error": "r10 `execute`: \u274c Execution failed",
+    "rounds": 16
+  },
+  {
+    "model": "pc-qwen35-9b",
+    "qid": "P06",
+    "arm": "pack",
+    "exit_reason": "finished",
+    "format_ok": false,
+    "correct_final": false,
+    "correct_given_own_params": false,
+    "value": null,
+    "gold": 57.6,
+    "parameters_used": null,
+    "first_error": "r12 `execute`: \u274c Execution failed",
+    "rounds": 16
+  },
+  {
+    "model": "pc-gptoss20b",
+    "qid": "P01",
+    "arm": "inline",
+    "exit_reason": "finished",
+    "format_ok": false,
+    "correct_final": false,
+    "correct_given_own_params": false,
+    "value": null,
+    "gold": 93,
+    "parameters_used": null,
+    "first_error": "r2 `Args`: \u274c Unknown tool 'Args'. Available tools: list_files, load_vector, load_raster, geoprocess, execute, inspect, fi",
+    "rounds": 6
+  },
+  {
+    "model": "pc-gptoss20b",
+    "qid": "P01",
+    "arm": "noparam",
+    "exit_reason": "finished",
+    "format_ok": false,
+    "correct_final": false,
+    "correct_given_own_params": false,
+    "value": null,
+    "gold": 93,
+    "parameters_used": null,
+    "first_error": "r2 `Args`: \u274c Unknown tool 'Args'. Available tools: list_files, load_vector, load_raster, geoprocess, execute, inspect, fi",
+    "rounds": 9
+  },
+  {
+    "model": "pc-gptoss20b",
+    "qid": "P01",
+    "arm": "pack",
+    "exit_reason": "finished",
+    "format_ok": false,
+    "correct_final": false,
+    "correct_given_own_params": false,
+    "value": null,
+    "gold": 93,
+    "parameters_used": null,
+    "first_error": "r1 `Args`: \u274c Unknown tool 'Args'. Available tools: list_files, load_vector, load_raster, geoprocess, execute, inspect, fi",
+    "rounds": 5
+  },
+  {
+    "model": "pc-gptoss20b",
+    "qid": "P06",
+    "arm": "inline",
+    "exit_reason": "finished",
+    "format_ok": false,
+    "correct_final": false,
+    "correct_given_own_params": false,
+    "value": null,
+    "gold": 57.6,
+    "parameters_used": null,
+    "first_error": "r1 `Args`: \u274c Unknown tool 'Args'. Available tools: list_files, load_vector, load_raster, geoprocess, execute, inspect, fi",
+    "rounds": 6
+  },
+  {
+    "model": "pc-gptoss20b",
+    "qid": "P06",
+    "arm": "noparam",
+    "exit_reason": "finished",
+    "format_ok": false,
+    "correct_final": false,
+    "correct_given_own_params": false,
+    "value": null,
+    "gold": 57.6,
+    "parameters_used": null,
+    "first_error": "r1 `Args`: \u274c Unknown tool 'Args'. Available tools: list_files, load_vector, load_raster, geoprocess, execute, inspect, fi",
+    "rounds": 6
+  },
+  {
+    "model": "pc-gptoss20b",
+    "qid": "P06",
+    "arm": "pack",
+    "exit_reason": "finished",
+    "format_ok": false,
+    "correct_final": false,
+    "correct_given_own_params": false,
+    "value": null,
+    "gold": 57.6,
+    "parameters_used": null,
+    "first_error": "r1 `Args`: \u274c Unknown tool 'Args'. Available tools: list_files, load_vector, load_raster, geoprocess, execute, inspect, fi",
+    "rounds": 5
+  }
+]
