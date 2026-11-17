@@ -93,6 +93,33 @@ def _lines(path: Path) -> list[str]:
         return []
 
 
+LOGGING_ONLY_TRACE_KEYS = ("raw_replies",)
+
+
+def _trace_text(path: Path) -> str:
+    """Trace text for the taxonomy, without the logging-only raw model replies.
+
+    `raw_replies` (added between matrix repeats) is diagnostic logging. The
+    taxonomy searches the trace text for words such as "traceback", so the raw
+    replies are removed first; scoring is therefore identical with or without
+    them. Lines without that key are passed through byte-for-byte.
+    """
+    out = []
+    for line in _lines(path):
+        if any(f'"{key}"' in line for key in LOGGING_ONLY_TRACE_KEYS):
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                out.append(line)
+                continue
+            if isinstance(event, dict):
+                for key in LOGGING_ONLY_TRACE_KEYS:
+                    event.pop(key, None)
+                line = json.dumps(event, ensure_ascii=False)
+        out.append(line)
+    return "\n".join(out)
+
+
 def _read_json_line(text: str) -> dict[str, Any] | None:
     try:
         value = json.loads(text)
@@ -150,7 +177,7 @@ def collect(batch: str) -> list[dict[str, Any]]:
         first = _answer(run / "attempts" / "answer_1.json")
         gold = gold_fn(qid)
         code = (run / "code.py").read_text(encoding="utf-8") if (run / "code.py").is_file() else ""
-        trace = "\n".join(_lines(run / "trace.jsonl"))
+        trace = _trace_text(run / "trace.jsonl")
         checker_text = "\n".join(_lines(run / "checker.jsonl"))
         params = final.get("parameters_used", {}) if final else {}
         own_correct = False
@@ -207,8 +234,35 @@ def _figures(rows: list[dict[str, Any]]) -> None:
     ax.legend(); ax.set_ylabel("gold value"); fig.savefig(SUMMARY / "sensitivity.png", dpi=150); plt.close(fig)
 
 
+def _cost(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Minutes and tokens per correct answer, by model and arm."""
+    output = []
+    for (model, arm), group in _group(rows, lambda r: (r["model"], r["arm"])):
+        correct = sum(bool(r["correct_final"]) for r in group)
+        minutes = sum(float(r["minutes"]) for r in group)
+        tokens = sum(int(r["tokens"]) for r in group)
+        output.append({"model": model, "arm": arm, "runs": len(group), "correct": correct,
+                       "minutes": round(minutes, 2), "tokens": tokens,
+                       "minutes_per_correct": round(minutes / correct, 2) if correct else None,
+                       "tokens_per_correct": round(tokens / correct) if correct else None})
+    return output
+
+
+def _by_arm(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """First-attempt vs final accuracy and A3 zero-pack-call diagnostics, by arm."""
+    output = []
+    for arm, group in _group(rows, lambda r: r["arm"]):
+        output.append({"arm": arm, "runs": len(group),
+                       "correct_first_attempt": sum(bool(r["correct_first_attempt"]) for r in group),
+                       "correct_final": sum(bool(r["correct_final"]) for r in group),
+                       "format_ok": sum(bool(r["format_ok"]) for r in group),
+                       "pack_calls_zero": sum(int(r["pack_calls"]) == 0 for r in group) if arm == "pack" else None})
+    return output
+
+
 def score(batch: str) -> list[dict[str, Any]]:
-    rows = collect(batch)
+    """Score one batch, or several comma-separated batches (e.g. matrix repeats)."""
+    rows = [row for name in batch.split(",") if name.strip() for row in collect(name.strip())]
     SUMMARY.mkdir(parents=True, exist_ok=True)
     _write_csv(SUMMARY / "per_run.csv", rows)
     accuracy = []
@@ -224,6 +278,17 @@ def score(batch: str) -> list[dict[str, Any]]:
     table += [f"| {r['qid']} | {r['arm']} | {r['n']} | {r['accuracy']:.3f} |" for r in accuracy]
     table += ["", "## Paired comparisons", "", "| Comparison | Both right | Only left | Only right | Both wrong | Descriptive sign-test p |", "|---|---:|---:|---:|---:|---:|"]
     table += [f"| {r['comparison']} | {r['both_right']} | {r['only_left']} | {r['only_right']} | {r['both_wrong']} | {r['descriptive_sign_test_p']:.5f} |" for r in paired]
+    cost = _cost(rows)
+    _write_csv(SUMMARY / "cost.csv", cost, ["model", "arm", "runs", "correct", "minutes", "tokens", "minutes_per_correct", "tokens_per_correct"])
+    by_arm = _by_arm(rows)
+    table += ["", "## Cost per correct answer", "", "| Model | Arm | Runs | Correct | Minutes | Tokens | Minutes per correct | Tokens per correct |", "|---|---|---:|---:|---:|---:|---:|---:|"]
+    table += [f"| {r['model']} | {r['arm']} | {r['runs']} | {r['correct']} | {r['minutes']} | {r['tokens']} | {r['minutes_per_correct'] if r['minutes_per_correct'] is not None else 'n/a'} | {r['tokens_per_correct'] if r['tokens_per_correct'] is not None else 'n/a'} |" for r in cost]
+    table += ["", "## First attempt vs final (AnswerChecker effect), by arm", "", "| Arm | Runs | Correct first attempt | Correct final | Format OK | A3 runs with zero pack calls |", "|---|---:|---:|---:|---:|---:|"]
+    table += [f"| {r['arm']} | {r['runs']} | {r['correct_first_attempt']} | {r['correct_final']} | {r['format_ok']} | {r['pack_calls_zero'] if r['pack_calls_zero'] is not None else 'n/a'} |" for r in by_arm]
+    labels = sorted({r["taxonomy_auto"] for r in rows if r["taxonomy_auto"]})
+    arms = sorted({r["arm"] for r in rows})
+    table += ["", "## Failure taxonomy (automatic), by arm", "", "| Label | " + " | ".join(arms) + " |", "|---|" + "---:|" * len(arms)]
+    table += [f"| {label} | " + " | ".join(str(sum(r["taxonomy_auto"] == label and r["arm"] == arm for r in rows)) for arm in arms) + " |" for label in labels]
     (SUMMARY / "results_tables.md").write_text("\n".join(table) + "\n", encoding="utf-8")
     return rows
 
@@ -235,10 +300,11 @@ def _group(rows: list[dict[str, Any]], keyfn):
 
 
 def _paired(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    by = {(r["model"], r["qid"], r["arm"]): r for r in rows}
+    # Pairs are formed within one batch (one matrix repeat) and pooled over batches.
+    by = {(r["batch"], r["model"], r["qid"], r["arm"]): r for r in rows}
     output = []
     for label, left, right, prefix in (("A3 vs A2", "pack", "inline", "P"), ("A2 vs A1", "inline", "noparam", "P"), ("A3 vs A1 controls", "pack", "noparam", "C")):
-        pairs = [(a, b) for (model, qid, arm), a in by.items() if arm == left and qid.startswith(prefix) and (b := by.get((model, qid, right)))]
+        pairs = [(a, b) for (batch, model, qid, arm), a in by.items() if arm == left and qid.startswith(prefix) and (b := by.get((batch, model, qid, right)))]
         both = sum(a["correct_final"] and b["correct_final"] for a,b in pairs); only_l = sum(a["correct_final"] and not b["correct_final"] for a,b in pairs); only_r = sum(not a["correct_final"] and b["correct_final"] for a,b in pairs); neither = len(pairs)-both-only_l-only_r
         n = only_l + only_r
         p = 1.0 if n == 0 else min(1.0, 2 * sum(math.comb(n, k) for k in range(min(only_l, only_r) + 1)) / 2**n)
