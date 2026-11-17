@@ -6,7 +6,7 @@
 #
 # Usage (from the repo root, PowerShell):
 #   .\kerala\tools\launch_detached.ps1 -Model pc-gptoss20b -Batch matrix_gptoss_v1
-#   .\kerala\tools\launch_detached.ps1 -Model cloud-flashlite -Batch matrix_cloud_v1
+#   (cloud-flashlite is kept in models.yaml for the floor record only; no cloud matrix)
 param(
     [Parameter(Mandatory = $true)][string]$Model,
     [Parameter(Mandatory = $true)][string]$Batch,
