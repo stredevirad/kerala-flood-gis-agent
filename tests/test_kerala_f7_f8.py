@@ -207,3 +207,53 @@ def test_gptoss_config_uses_low_reasoning_and_8192_tokens():
     config = model_config("pc-gptoss20b")
     assert config["reasoning_effort"] == "low"
     assert config["max_tokens"] == 8192
+
+
+# ------------------------------------- F8: Ollama 500 on raw-code tool calls
+
+RAW_CODE = "import numpy as np\narr = np.array([-20, -14])\nprint(f\"n: {len(arr)}\", 'ok')\n"
+
+
+def _ollama_parse_error(raw: str):
+    body = {"message": f"error parsing tool call: raw='{raw}', err=invalid character 'i' looking for beginning of value",
+            "type": "api_error", "param": None, "code": None}
+    return _status_error(InternalServerError, 500, body=body, message="Error code: 500")
+
+
+def test_raw_code_tool_call_500_is_recovered_as_execute_without_retry(monkeypatch):
+    sleeps = []
+    monkeypatch.setattr("src.agent.llm_engine.time.sleep", sleeps.append)
+    calls = []
+
+    def create(**_kwargs):
+        calls.append(1)
+        raise _ollama_parse_error(RAW_CODE)
+
+    engine = _engine_with(create)
+    result = engine.generate("prompt")
+    _thought, action, args = _parse_action(result["text"])
+    assert action == "execute"
+    assert args["code"] == RAW_CODE
+    assert len(calls) == 1 and sleeps == []
+    assert engine.recovered_tool_calls == 1
+    assert engine.last_error is None
+
+
+def test_malformed_json_tool_call_500_becomes_a_format_reminder(monkeypatch):
+    monkeypatch.setattr("src.agent.llm_engine.time.sleep", lambda _s: None)
+    engine = _engine_with(lambda **_k: (_ for _ in ()).throw(_ollama_parse_error('{"op": "clip", inputs')))
+    _thought, action, _args = _parse_action(engine.generate("prompt")["text"])
+    assert action == ""
+
+
+def test_other_500s_are_not_recovered(monkeypatch):
+    monkeypatch.setattr("src.agent.llm_engine.time.sleep", lambda _s: None)
+    other = _status_error(InternalServerError, 500, body={"message": "model runner crashed"})
+
+    def create(**_kwargs):
+        raise other
+
+    engine = _engine_with(create)
+    assert engine.generate("prompt")["text"].startswith("Error during API call")
+    assert engine.recovered_tool_calls == 0
+    assert engine.last_error["status_code"] == 500

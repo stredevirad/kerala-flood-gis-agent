@@ -244,6 +244,7 @@ def run_one(qid: str, arm: str, model: str, out: Path, *, stub_mode: str = "ok")
         "throttle_seconds": round(throttle_seconds, 3), "quota_errors": quota_errors,
         "reasoning_effort": config.get("reasoning_effort"),
         "native_tool_calls": int(getattr(engine, "native_tool_calls", 0) or 0),
+        "recovered_tool_calls": int(getattr(engine, "recovered_tool_calls", 0) or 0),
         "last_api_error": getattr(engine, "last_error", None),
         "exit_reason": reason, "error": caught or None, "git_commit": _git_commit(),
         "pack_hash": _sha256(ROOT / "kerala" / "pack" / "kerala_pack.yaml"),

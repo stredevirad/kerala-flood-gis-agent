@@ -33,6 +33,7 @@ import random
 import re
 import time
 from datetime import timezone
+from types import SimpleNamespace
 from email.utils import parsedate_to_datetime
 from typing import Optional, Dict, Any, List
 
@@ -132,6 +133,37 @@ def react_text_from_tool_calls(tool_calls: Any) -> str:
     return f"Thought: (native tool call)\nAction: {name}\nArgs: {arguments}"
 
 
+_UNPARSED_TOOL_CALL_PREFIX = "error parsing tool call: raw='"
+
+
+def recover_unparsed_tool_call(exc: BaseException) -> Optional[str]:
+    """Recover a gpt-oss tool call that Ollama could not parse (Kerala F8).
+
+    gpt-oss sometimes passes the `execute` argument as raw Python code (its
+    Harmony habit for code tools) instead of JSON. Ollama then answers HTTP 500
+    with `error parsing tool call: raw='<arguments>', err=...`, so the reply
+    never reaches the ReAct parser. Raw, non-JSON arguments can only be code,
+    so they are rendered as an `execute` call; a malformed JSON object (tool
+    unknown) becomes a reply without an Action, which earns the usual format
+    reminder. Returns None for every other error.
+    """
+    if getattr(exc, "status_code", None) != 500:
+        return None
+    body = getattr(exc, "body", None)
+    message = body.get("message") if isinstance(body, dict) else None
+    if not isinstance(message, str) or not message.startswith(_UNPARSED_TOOL_CALL_PREFIX):
+        return None
+    end = message.rfind("', err=")
+    if end == -1:
+        return None
+    raw = message[len(_UNPARSED_TOOL_CALL_PREFIX):end]
+    if not raw.strip():
+        return None
+    if raw.lstrip().startswith(("{", "[")):
+        return "Thought: (tool call with unparseable JSON arguments)"
+    return "Thought: (native tool call, raw code)\nAction: execute\nArgs: " + json.dumps({"code": raw}, ensure_ascii=False)
+
+
 class OpenAIEngine:
     """OpenAI Chat Completions, and anything that speaks the same protocol.
 
@@ -165,6 +197,7 @@ class OpenAIEngine:
         # (gpt-oss through Ollama accepts low/medium/high).
         self.reasoning_effort = reasoning_effort
         self.native_tool_calls = 0
+        self.recovered_tool_calls = 0
         self.backoff_seconds = 0.0
         # Kerala F7: structured error state (see describe_api_error).
         self.last_error = None
@@ -297,6 +330,17 @@ class OpenAIEngine:
                     response = self.client.chat.completions.create(**kwargs)
                     break
                 except retryable_errors as e:
+                    # Kerala F8: Ollama rejects a gpt-oss tool call whose
+                    # arguments are raw code (HTTP 500). The model did reply;
+                    # recover it instead of retrying the same failure.
+                    recovered = recover_unparsed_tool_call(e)
+                    if recovered is not None:
+                        self.recovered_tool_calls += 1
+                        response = SimpleNamespace(
+                            choices=[SimpleNamespace(message=SimpleNamespace(content=recovered, tool_calls=None))],
+                            usage=None,
+                        )
+                        break
                     if attempt == 5:
                         raise
 
