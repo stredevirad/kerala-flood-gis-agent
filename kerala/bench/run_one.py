@@ -149,6 +149,60 @@ def _write_heartbeat(out: Path, engine: Any, throttle_seconds: float) -> None:
     (out / "heartbeat.json").write_text(json.dumps(payload) + "\n", encoding="utf-8")
 
 
+def _raw_reply_record(response: Any) -> dict[str, Any]:
+    """What the API returned, before any engine processing (logging only)."""
+    try:
+        choice = response.choices[0]
+        message = choice.message
+        calls = []
+        for call in getattr(message, "tool_calls", None) or []:
+            function = call.get("function") if isinstance(call, dict) else getattr(call, "function", None)
+            get = (lambda key: function.get(key)) if isinstance(function, dict) else (lambda key: getattr(function, key, None))
+            calls.append({"name": get("name"), "arguments": get("arguments")})
+        reasoning = getattr(message, "reasoning", None) or getattr(message, "reasoning_content", None)
+        return {"finish_reason": getattr(choice, "finish_reason", None), "content": getattr(message, "content", None),
+                "tool_calls": calls, "reasoning": reasoning}
+    except Exception as exc:  # never let logging break a run
+        return {"unreadable_response": type(exc).__name__}
+
+
+def _install_raw_reply_logger(engine: Any, sink: list[dict[str, Any]]) -> None:
+    """Record every raw API reply (or error body) into `sink`. Logging only.
+
+    Wraps the client's `chat.completions.create`; the response object or the
+    exception is passed through unchanged, so prompts, settings, parsing and
+    the engine's retry/recovery behaviour are identical with or without it.
+    """
+    client = getattr(engine, "client", None)
+    completions = getattr(getattr(client, "chat", None), "completions", None)
+    original = getattr(completions, "create", None)
+    if original is None:
+        return
+
+    def logged_create(*args: Any, **kwargs: Any) -> Any:
+        try:
+            response = original(*args, **kwargs)
+        except Exception as exc:
+            body = getattr(exc, "body", None)
+            sink.append({"error_type": type(exc).__name__, "status_code": getattr(exc, "status_code", None),
+                         "body": body if isinstance(body, (dict, list, str)) else None})
+            raise
+        sink.append(_raw_reply_record(response))
+        return response
+
+    completions.create = logged_create
+
+
+def _with_raw_replies(events: list[dict[str, Any]], sink: list[dict[str, Any]]):
+    """on_step callback: attach the raw replies received since the last step."""
+    def on_step(event: dict[str, Any]) -> None:
+        event = dict(event)
+        event["raw_replies"] = list(sink)
+        sink.clear()
+        events.append(event)
+    return on_step
+
+
 def run_one(qid: str, arm: str, model: str, out: Path, *, stub_mode: str = "ok") -> dict[str, Any]:
     """Run one question and persist the standard artifact bundle."""
     if arm not in {"noparam", "inline", "pack"}:
@@ -175,6 +229,7 @@ def run_one(qid: str, arm: str, model: str, out: Path, *, stub_mode: str = "ok")
         )
     started = time.monotonic()
     events: list[dict[str, Any]] = []
+    raw_replies: list[dict[str, Any]] = []
     result = None
     caught = ""
     caught_exc: BaseException | None = None
@@ -188,6 +243,7 @@ def run_one(qid: str, arm: str, model: str, out: Path, *, stub_mode: str = "ok")
     try:
         if not engine.load_model():
             raise RuntimeError("model initialization failed")
+        _install_raw_reply_logger(engine, raw_replies)  # logging only
         original_generate = engine.generate
 
         def measured_generate(*args: Any, **kwargs: Any) -> dict[str, Any]:
@@ -212,7 +268,7 @@ def run_one(qid: str, arm: str, model: str, out: Path, *, stub_mode: str = "ok")
             pack=pack, timeout=int(config.get("sandbox_timeout", 300)), max_rounds=int(config.get("max_rounds", 16)),
             context_chars=int(config.get("context_chars", 24000)), verbose=False,
         )
-        result = agent.run(compose_task(question, arm, pack=pack), data_dir=str(LAYERS), work_dir=str(out), on_step=events.append)
+        result = agent.run(compose_task(question, arm, pack=pack), data_dir=str(LAYERS), work_dir=str(out), on_step=_with_raw_replies(events, raw_replies))
     except Exception as exc:
         caught = f"{type(exc).__name__}: {exc}"
         caught_exc = exc

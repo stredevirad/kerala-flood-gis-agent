@@ -556,3 +556,29 @@ Output: `35 passed in 2.04s`.
 - Launch: `powershell -NoProfile -ExecutionPolicy Bypass -File kerala\tools\launch_detached.ps1 -Model pc-gptoss20b -Batch matrix_gptoss_v1` at 2026-11-17 06:10 IST (commit `c6f8e08`; frozen test `1 passed` just before). Plan verified with `--dry-run`: 52 runs. Note: `--questions all` would plan 58, because it includes D01–D03, so the launcher passes P01–P12 and C01–C08 explicitly.
 - Status at 06:13: 1/52 done; last line: `done 1/52 P01/noparam: finished; ETA 133.3 min`.
 - Status at 06:17: 2/52 done (`done 2/52 P01/inline: finished; ETA 123.3 min`); runner alive. Monitoring stopped here (background waiter reaped for low system memory; 3.2 GB free). No harness file was changed after launch commit `c6f8e08`; later commits touch only PROGRESS.md.
+
+## Session 2 (2026-11-17, Claude Code, unattended): repeats and Phase 6
+
+Kirito's decisions (morning of 2026-11-17): cloud swap to `gemini-3.5-flash-lite` confirmed **for the floor record only**; no cloud matrix. He deleted the Gemini key. Run a second repeat of the full matrix, then Phase 6 using both repeats. No GitHub push.
+
+### Key and cloud clean-up
+- `kerala/.env` deleted (`rm -f kerala/.env`; `ls` confirms it is gone). It was git-ignored and never committed.
+- No default run path uses the cloud model: `kerala/ask.py` defaults to `local-qwen7b`, `run_bench`'s cloud branches only apply when `--model cloud-flashlite` is passed explicitly, and the launcher's usage comment no longer lists a cloud example. `cloud-flashlite` stays in `models.yaml` (required by `kerala/config.py`) only to reproduce the floor record.
+
+### Security scan of git history
+- Command (prints only commit hashes and paths): `git rev-list --all | xargs -n 50 git grep -l -I "AIza"` across all 67 commits, plus `AIza[0-9A-Za-z_-]{35}` (full Google key shape) and `GEMINI_API_KEY=` followed by any non-empty value.
+- **Result: no Google API key in history.** The only `AIza` match, present in every commit, is the upstream UI placeholder `"key_hint": "AIza…"` at `app/settings_store.py:73` (not a key). Full-key-shaped matches: none. Non-empty `GEMINI_API_KEY=` assignments: none. No `.env` file was ever added.
+
+### Repeat 1: `matrix_gptoss_v1` complete (52/52)
+- Monitored with a 15-minute poll (`tasklist` + `grep`; low memory). Finished at 09:19 IST, about 3.1 h after launch; no resume was needed.
+- From the metas: 52 `meta.json`; exit_reason **40 finished, 12 max_rounds, 0 error, 0 timeout, 0 paused_quota**. 321 native tool calls rendered and 42 raw-code tool calls recovered from Ollama 500s (F8). Largest per-call prompt 10,388 tokens (< 14,500). Total wall time 3.04 h.
+- Harness unchanged during the run: `git diff --stat c6f8e08 HEAD -- src kerala/agent.py kerala/pack kerala/models.yaml kerala/bench/run_one.py kerala/bench/run_bench.py kerala/config.py` is empty. The `git_commit` values in the metas vary only because of commits to docs, `score.py`, `analysis.py`, `trace_html.py` and the extras, none of which `run_one`/`run_bench` import.
+- Frozen test after r1: `1 passed`.
+
+### Logging-only change between repeats: raw model replies in `trace.jsonl`
+- **Logging only; made after repeat 1 and before repeat 2.** Prompts, model settings, parsing, engine retries/recovery and scoring are unchanged.
+- `kerala/bench/run_one.py`: `_install_raw_reply_logger` wraps the API client's `chat.completions.create` and records each raw reply (`content`, `tool_calls`, `finish_reason`, `reasoning`) or error body (`error_type`, `status_code`, `body`). It returns the same response or re-raises the same exception. `_with_raw_replies` attaches the records received since the previous step to each trace event as `raw_replies`. No upstream file changed.
+- `kerala/bench/score.py`: the taxonomy substring-searches the trace text, so `_trace_text` drops `raw_replies` before building it. Lines without that key are passed through byte-for-byte. Re-scoring `floor_gptoss_f8` and `floor_cloud` gave identical taxonomy labels.
+- Tests: `tests/test_kerala_raw_reply.py` (6 tests: parser input unchanged, error bodies recorded and re-raised so F8 recovery still works, installs on a real `OpenAI` client, events drained, stub trace has the key, scorer ignores it). Kerala suite: `75 passed in 16.52s`.
+- Live check: `run_one --qid D01 --arm pack --model pc-gptoss20b --out results/runs/diag_rawreply/...` → finished, 3 rounds, one raw reply per event, value 860 (correct).
+- Consequence: r1 traces have no `raw_replies`; r2 traces do. Scores are comparable because scoring ignores the field.
