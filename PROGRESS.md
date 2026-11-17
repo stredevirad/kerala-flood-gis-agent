@@ -1,5 +1,62 @@
 # PROGRESS
-## Status: Phase 5 STOP — all three candidate models are below the 2/6 floor; no model selected; matrix not started
+## Morning summary (Claude Code, unattended session 2026-11-17)
+
+**Status:** **gpt-oss:20b passed the Phase 5 floor gate (2/6)** once its integration was fixed. The **local 52-run matrix `matrix_gptoss_v1` is running detached** (launched 06:10 IST). Gemini scored 1/6, so there is no cloud matrix. Phase 6 has not started, and nothing was pushed.
+
+### §7 floor table (P01 + P06 × 3 arms; rule: ≥ 2/6 correct)
+
+| Model | QID / arm | exit_reason | format_ok | correct_final | correct_given_own_params | value vs gold | first error in trace |
+|---|---|---|---:|---:|---:|---|---|
+| gpt-oss:20b (F8, official) | P01 / noparam | finished | no | no | no | — vs 93 | `geoprocess` op `list_files` (not an op); force-terminated on repeats |
+| gpt-oss:20b (F8, official) | P01 / inline | finished | yes | no | no | 0 vs 93 | `geoprocess` got unexpected argument `path` |
+| gpt-oss:20b (F8, official) | P01 / pack | finished | yes | no | no | 86 vs 93 | `geoprocess` got unexpected argument `path`; `op=load_vector` |
+| gpt-oss:20b (F8, official) | P06 / noparam | finished | no | no | no | — vs 57.6 | `clip` missing `overlay` |
+| gpt-oss:20b (F8, official) | P06 / inline | finished | yes | **yes** | no | 57.254 vs 57.6 | first `execute` failed (rasterio mask); recovered |
+| gpt-oss:20b (F8, official) | P06 / pack | finished | yes | **yes** | no | 57.221 vs 57.6 | pseudo-tool `commentary` (Harmony quirk) |
+| gemini-3.5-flash-lite | P01 / noparam | finished | yes | no | no | 2 vs 93 | `execute` called without `code`; chose a 0 m buffer |
+| gemini-3.5-flash-lite | P01 / inline | finished | yes | no | no | 96 vs 93 | `execute` failed; final = `intersects`-rule result |
+| gemini-3.5-flash-lite | P01 / pack | finished | yes | no | no | 96 vs 93 | `execute` failed; final = `intersects`-rule result |
+| gemini-3.5-flash-lite | P06 / noparam | finished | yes | no | no | 28.52 vs 57.6 | chose `jrc_seasonality > 0` (removes the seasonal flood) |
+| gemini-3.5-flash-lite | P06 / inline | finished | yes | **yes** | no | 57.25 vs 57.6 | `geoprocess` missing `op` |
+| gemini-3.5-flash-lite | P06 / pack | max_rounds | no | no | no | — vs 57.6 | `execute` given `geoprocess`/`finish` payloads → SyntaxError ×5 |
+| qwen3.5:9b | P01 / noparam | finished | yes | no | no | 161 vs 93 | `sjoin` failed; final = `intersects` at 500 m |
+| qwen3.5:9b | P01 / inline | finished | yes | no | no | 96 vs 93 | `execute` failed; final = `intersects`-rule result |
+| qwen3.5:9b | P01 / pack | finished | yes | no | no | 0 vs 93 | index-aligned `within(GeoSeries)`, then hard-coded 0 |
+| qwen3.5:9b | P06 / noparam | max_rounds | no | no | no | — vs 57.6 | tuple has no `.minx` |
+| qwen3.5:9b | P06 / inline | finished | no | no | no | — vs 57.6 | `select` missing `layer` |
+| qwen3.5:9b | P06 / pack | finished† | no | no | no | — vs 57.6 | malformed `execute` payload |
+| gpt-oss:20b (before F8, invalid) | all six | finished (P06/pack †) | no | no | no | — | empty reply parsed as unknown tool `Args` (integration bug) |
+| qwen2.5-coder:7b (laptop) | all six | see Phase 5 table | 1/6 | 0/6 | 0/6 | run folders not on this PC | GIS argument errors, 300 s buffer timeout |
+
+Totals: gpt-oss after F8 **2/6** · Gemini **1/6** · Qwen 3.5 **0/6** · Qwen2.5-Coder 7B **0/6** · gpt-oss before F8 0/6 (not a valid measurement). † relabelled from a false `paused_quota` (F7). Full table with `parameters_used`: `results/summary/floor_diagnostics.md`.
+
+**P01 pattern (no model has produced 93).** The independent gold gives 93 for both representative_point and centroid at 250 m, **96 for `intersects` at 250 m**, and 161 for `intersects` at 500 m. Three runs from two models returned exactly 96, and one returned exactly 161. Those runs tested whole hospital polygons instead of the representative point the parameter specifies. This is a method choice, not a CRS or execution error. The benchmark is unchanged.
+
+### Which model was chosen, and why
+- **Primary model: gpt-oss:20b (local).** It is the only model at ≥ 2/6 on the unchanged floor. Your rule says: if gpt-oss passes, run the local 52-run matrix, and run the cloud matrix afterwards only if Gemini also passes. Gemini scored 1/6, so only the local matrix runs, and Gemini's floor goes into the "below the floor" comparison.
+- gpt-oss's earlier 0/6 was an integration failure, now fixed as **F8**. gpt-oss answers through native Harmony tool calls; Ollama returned these in `tool_calls` with empty `content`, which the engine ignored. gpt-oss also sends `execute` code as raw text, which Ollama rejects with HTTP 500. Both cases are now converted to ReAct `Action`/`Args` text, with `reasoning_effort=low` and `max_tokens=8192`.
+- **Caveat:** in the first F8 floor attempt, 2 cells ended on Ollama 500s, leaving 1 correct out of 4 valid cells. I wrote a stop rule into this file before re-running anything, and under it only those two cells were re-run (`--resume`) after the 500 fix. One of them, P06/inline, became the second pass. The pass is narrow: 2/6, both on P06.
+
+### Matrix progress
+- Batch `matrix_gptoss_v1`, model `pc-gptoss20b`, 52 runs: P01–P12 × 3 arms, plus C01–C08 × noparam/pack. It was launched detached through WMI at 06:10 IST, so it survives this session ending. Frozen hashes were verified before launch, and the runner checks them before and after every run.
+- ETA ≈ 3.2 h (floor mean 3.7 min/run), so around 09:20 IST. The worst case, at the 25-min per-run cap, is much longer. Progress is in `logs/claude_runs/matrix_gptoss_v1.20261117_061003.out.log` (`done N/52 …; ETA … min` lines). The latest status I recorded is in the matrix section at the bottom of this file.
+
+### Exact commands (PowerShell, from the repo root)
+- Resume or continue the matrix after any interruption (finished runs are skipped):
+  `powershell -NoProfile -ExecutionPolicy Bypass -File kerala\tools\launch_detached.ps1 -Model pc-gptoss20b -Batch matrix_gptoss_v1`
+- Check whether it is running: `Get-CimInstance Win32_Process -Filter "Name='python.exe'" | Where-Object { $_.CommandLine -match 'run_bench' }`
+- Score it when done: `.\.venv\Scripts\python.exe -m kerala.bench.score --batch matrix_gptoss_v1 --out results\summary\matrix_gptoss_v1`
+- If you later approve a cloud matrix: `powershell -NoProfile -ExecutionPolicy Bypass -File kerala\tools\launch_detached.ps1 -Model cloud-flashlite -Batch matrix_cloud_v1`. The runner stops by itself after 3 consecutive quota-paused runs. Google resets free-tier daily quotas at midnight Pacific time (13:30 IST); run the same command again after that.
+
+### Needs Kirito
+1. **Cloud model substitution.** `gemini-2.5-flash-lite` now returns 404 "no longer available to new users". I switched `cloud-flashlite` to **`gemini-3.5-flash-lite`**, which Google names as its successor, and removed `seed` because the endpoint rejects it. Please confirm this or name another model.
+2. **API key hygiene.** Your Gemini key had been pasted into the *tracked* `kerala/.env.example`. I confirmed `kerala/.env` holds the same key, then restored `.env.example` to blank. The key was never staged or committed.
+3. **Harness changes made before the matrix** (details below): **F7** labels quota from structured errors only, enforces the RPM limit per call, and writes the heartbeat file. **F8** handles gpt-oss tool calls, recovers raw-code 500s, sets `reasoning_effort=low` and `max_tokens=8192`, and fixes the empty-reply placeholder. The placeholder fix applies to every model, so the Qwen floors were measured under the older harness; it only affects empty replies.
+4. **The floor pass is narrow:** 2/6, both on P06, and no model has ever produced P01's 93. If the matrix shows the same `intersects`-rule pattern on P01/P02/P11/P12, consider whether the facility-rule wording needs a bench v2. **Nothing in the benchmark was changed.**
+5. **Observability gap:** `trace.jsonl` does not store the raw model reply, so tool/argument mismatches (such as Gemini P06/pack) cannot be fully diagnosed. I did not change this mid-matrix; it is worth adding before Phase 6.
+6. Phase 6 (score, read at least 10 failed traces, write REPORT/README/INTERVIEW_PREP) and the GitHub push are waiting for you.
+
+## Earlier status (superseded by the Morning summary): Phase 5 STOP — all candidate models were below the 2/6 floor before F8
 
 ## Model selection
 
@@ -127,6 +184,11 @@ All runs used GISReActAgent on examples\urban-heat-madison, task "Compute the me
 - The Phase 4 P06 reconciliation keeps the 64,000-pixel visible-layer result. Phase 2's 64,069-pixel reference uses a full DEM before AOI clipping for slope gradients; 121 AOI-edge slope classifications differ (95 Phase-2-only and 26 gold-only), yielding the 69-pixel net difference. This is not caused by the district mask, VV/JRC/DEM nodata, or rounding, and is documented in GOLD_REVIEW.md rather than changing the source layers or threshold.
 - Kirito approved the revised gold review. `kerala/bench/frozen.json` now records the approved hashes for questions, rubric, gold, and pack plus the complete top-level layer listing, sizes, and hashes. The frozen integrity test passed before the Phase 4 freeze commit.
 - No Phase 0 acceptance item was skipped.
+
+- 2026-11-17 (Claude Code, unattended, pre-approved by Kirito up to Phase 6): **gpt-oss:20b chosen as the primary model; local 52-run matrix `matrix_gptoss_v1` launched; no cloud matrix.** Reason: on the unchanged P01/P06 floor, gpt-oss after the F8 integration fix scored 2/6 (meets >=2/6); gemini-3.5-flash-lite 1/6, qwen3.5:9b 0/6, qwen2.5-coder:7b 0/6. Kirito's instruction: gpt-oss passes -> local matrix; cloud matrix only if Gemini also passes.
+- 2026-11-17: cloud model `gemini-2.5-flash-lite` (404, retired for new users) replaced by `gemini-3.5-flash-lite`, without `seed` (rejected with HTTP 400). Pending Kirito's confirmation.
+- 2026-11-17: gpt-oss uses `reasoning_effort: low` (lowest gpt-oss level; `none`/`minimal` accepted by Ollama but not lower) and `max_tokens: 8192`.
+- 2026-11-17: matrix batches are launched with `kerala/tools/launch_detached.ps1` (WMI `Win32_Process.Create`, outside the agent session's job object; always `--resume`). The first `Start-Process` launch was stopped after ~1 min and its partial P01/noparam folder deleted (no meta.json); layers verified intact (9 files, frozen test passed).
 
 ## Needs Kirito
 - Gold was approved and frozen. Do not edit `questions.yaml`, `rubric.yaml`, `gold.json`, `kerala_pack.yaml`, or the top-level `data/kerala/layers/` files; the frozen test guards their approved hashes and layer listing.
@@ -385,15 +447,15 @@ The supervisor log is `logs/machine_setup/wait_then_run_selection.out.log`; each
 | pc-gptoss20b | P01 / pack | finished | no | no | no | 5 | 7.24 | 20.96 | 18.76 | 6707 | empty response; parsed as unknown tool `Args` |
 | pc-gptoss20b | P06 / noparam | finished | no | no | no | 6 | 13.14 | 21.25 | 19.28 | 6708 | empty response; parsed as unknown tool `Args` |
 | pc-gptoss20b | P06 / inline | finished | no | no | no | 6 | 12.00 | 22.06 | 18.88 | 6708 | empty response; parsed as unknown tool `Args` |
-| pc-gptoss20b | P06 / pack | paused_quota* | no | no | no | 5 | 6.70 | 21.91 | 19.10 | 6708 | empty response; parsed as unknown tool `Args` |
+| pc-gptoss20b | P06 / pack | finished* | no | no | no | 5 | 6.70 | 21.91 | 19.10 | 6708 | empty response; parsed as unknown tool `Args` |
 | pc-qwen35-9b | P01 / noparam | finished | yes | no | no | 16 | 5.32 | 13.83 | 19.22 | 7004 | first `geopandas.sjoin` execution failed; trace truncates the exception |
 | pc-qwen35-9b | P01 / inline | finished | yes | no | no | 16 | 3.32 | 20.71 | 13.46 | 7004 | execution failed after flood/hospital bounds; traceback truncated |
 | pc-qwen35-9b | P01 / pack | finished | yes | no | no | 16 | 5.89 | 22.28 | 16.54 | 7004 | failed selecting a joined column; traceback truncates the `KeyError` |
 | pc-qwen35-9b | P06 / noparam | max_rounds | no | no | no | 16 | 3.36 | 23.13 | 16.34 | 7005 | `AttributeError`: tuple has no `.minx` |
 | pc-qwen35-9b | P06 / inline | finished | no | no | no | 16 | 3.30 | 23.05 | 15.50 | 7004 | `select` missing required `layer` input |
-| pc-qwen35-9b | P06 / pack | paused_quota* | no | no | no | 16 | 2.28 | 22.48 | 15.43 | 7005 | malformed `execute` payload; `SyntaxError` |
+| pc-qwen35-9b | P06 / pack | finished* | no | no | no | 16 | 2.28 | 22.48 | 15.43 | 7005 | malformed `execute` payload; `SyntaxError` |
 
-\* The two `paused_quota` labels are false positives from the trace substring check described under Decisions made; neither run received an HTTP 429 or recorded a model/API error.
+\* Originally labelled `paused_quota`: false positives from the old trace substring check (a "429" inside `gen_time_ms`). Re-labelled `finished` by F7 on 2026-11-17; the original label is kept in each `meta.json` as `exit_reason_original`.
 
 The 52-run serial extrapolations from each six-run mean are 7.76 hours for `pc-gptoss20b` and 3.39 hours for `pc-qwen35-9b`. These are timing-only estimates from below-floor candidates, not authorization to run a matrix. No model is selected, so there is no runnable matrix command; the 52-run matrix remains stopped pending Kirito's next decision.
 
@@ -476,3 +538,8 @@ Output: `35 passed in 2.04s`.
 - The fix changes only calls that previously failed; the four valid cells had no lost replies (rounds = successful LLM calls). So per the rule, `floor_gptoss_f8` is resumed with `--resume`, which re-runs only P01/pack and P06/inline. The original error artifacts are archived in `results/runs/_archive_floor_gptoss_f8_errors/`.
 - Resume output: `skip resumed P01/noparam`, `skip resumed P01/inline`, `done 3/6 P01/pack: finished`, `done 4/6 P06/inline: finished`, `skip resumed P06/pack`, `skip resumed P06/noparam`. P01/pack: 16 rounds, no API error, value 86 vs 93 (wrong). P06/inline: 3 rounds, 1 recovered raw-code call, 57.254 vs 57.6 km² (correct).
 - **Official gpt-oss floor (`floor_gptoss_f8`): 2/6 correct_final (P06/inline, P06/pack), 0/6 correct_given_own_params, zero `error` exits. Passes the ≥2/6 rule.** Score: `.venv/Scripts/python.exe -m kerala.bench.score --batch floor_gptoss_f8 --out results/summary/model_selection/pc-gptoss20b-f8`.
+
+## Phase 5 matrix: `matrix_gptoss_v1` (gpt-oss:20b, local)
+
+- Launch: `powershell -NoProfile -ExecutionPolicy Bypass -File kerala	ools\launch_detached.ps1 -Model pc-gptoss20b -Batch matrix_gptoss_v1` at 2026-11-17 06:10 IST (commit `c6f8e08`; frozen test `1 passed` just before). Plan verified with `--dry-run`: 52 runs. Note: `--questions all` would plan 58, because it includes D01–D03, so the launcher passes P01–P12 and C01–C08 explicitly.
+- Status at 06:13: 1/52 done; last line: `done 1/52 P01/noparam: finished; ETA 133.3 min`.
