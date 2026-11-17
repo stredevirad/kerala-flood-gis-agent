@@ -109,6 +109,8 @@ def describe_api_error(exc: BaseException) -> Dict[str, Any]:
         "status_code": status_code,
         "status_field": status_field,
         "quota": bool(quota),
+        # Diagnostic text only; never used for classification.
+        "message": str(exc)[:400],
     }
 
 

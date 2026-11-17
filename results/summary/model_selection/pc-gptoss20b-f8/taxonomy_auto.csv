@@ -1,0 +1,7 @@
+batch,model,qid,arm,taxonomy_auto,manual_label
+floor_gptoss_f8,pc-gptoss20b,P01,inline,TOOL_BUG,
+floor_gptoss_f8,pc-gptoss20b,P01,noparam,FORMAT,
+floor_gptoss_f8,pc-gptoss20b,P01,pack,CRASH,
+floor_gptoss_f8,pc-gptoss20b,P06,inline,CRASH,
+floor_gptoss_f8,pc-gptoss20b,P06,noparam,FORMAT,
+floor_gptoss_f8,pc-gptoss20b,P06,pack,,
