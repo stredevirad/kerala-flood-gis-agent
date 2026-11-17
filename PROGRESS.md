@@ -40,6 +40,8 @@ Totals: gpt-oss after F8 **2/6** · Gemini **1/6** · Qwen 3.5 **0/6** · Qwen2.
 
 ### Matrix progress
 - Batch `matrix_gptoss_v1`, model `pc-gptoss20b`, 52 runs: P01–P12 × 3 arms, plus C01–C08 × noparam/pack. It was launched detached through WMI at 06:10 IST, so it survives this session ending. Frozen hashes were verified before launch, and the runner checks them before and after every run.
+- **Last check (06:17 IST): 2/52 done** (P01/noparam finished, P01/inline finished; P01/pack running), runner PIDs 15000/19976 alive, no stderr output. I stopped monitoring at this point: Claude Code reaped my background waiter because the PC was critically low on memory (3.2 GB of 23.7 GB free while gpt-oss is loaded). The matrix does not depend on this session. **Nobody has checked it since 06:17**, so look at the log first.
+- **When you wake up:** check the log tail. If the runner is gone and fewer than 52 `done` lines exist, run the resume command below once; it re-runs only unfinished, `error` and `paused_quota` cells. Then tabulate the `exit_reason` values in `results/runs/matrix_gptoss_v1/pc-gptoss20b/*/*/meta.json` (expect 52), list any `error`/`timeout` cells with `last_api_error.message`, check the largest `max_prompt_tokens` against 14,500, run `.\.venv\Scripts\python.exe -m pytest -q tests\test_kerala_frozen.py`, and confirm `git diff --stat c6f8e08 HEAD -- src kerala/agent.py kerala/bench kerala/pack kerala/models.yaml` is empty (no harness change during the matrix). Scoring is the first step of Phase 6.
 - ETA ≈ 3.2 h (floor mean 3.7 min/run), so around 09:20 IST. The worst case, at the 25-min per-run cap, is much longer. Progress is in `logs/claude_runs/matrix_gptoss_v1.20261117_061003.out.log` (`done N/52 …; ETA … min` lines). The latest status I recorded is in the matrix section at the bottom of this file.
 
 ### Exact commands (PowerShell, from the repo root)
@@ -553,3 +555,4 @@ Output: `35 passed in 2.04s`.
 
 - Launch: `powershell -NoProfile -ExecutionPolicy Bypass -File kerala\tools\launch_detached.ps1 -Model pc-gptoss20b -Batch matrix_gptoss_v1` at 2026-11-17 06:10 IST (commit `c6f8e08`; frozen test `1 passed` just before). Plan verified with `--dry-run`: 52 runs. Note: `--questions all` would plan 58, because it includes D01–D03, so the launcher passes P01–P12 and C01–C08 explicitly.
 - Status at 06:13: 1/52 done; last line: `done 1/52 P01/noparam: finished; ETA 133.3 min`.
+- Status at 06:17: 2/52 done (`done 2/52 P01/inline: finished; ETA 123.3 min`); runner alive. Monitoring stopped here (background waiter reaped for low system memory; 3.2 GB free). No harness file was changed after launch commit `c6f8e08`; later commits touch only PROGRESS.md.
