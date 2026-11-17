@@ -36,6 +36,7 @@ Totals: gpt-oss after F8 **2/6** · Gemini **1/6** · Qwen 3.5 **0/6** · Qwen2.
 - **Primary model: gpt-oss:20b (local).** It is the only model at ≥ 2/6 on the unchanged floor. Your rule says: if gpt-oss passes, run the local 52-run matrix, and run the cloud matrix afterwards only if Gemini also passes. Gemini scored 1/6, so only the local matrix runs, and Gemini's floor goes into the "below the floor" comparison.
 - gpt-oss's earlier 0/6 was an integration failure, now fixed as **F8**. gpt-oss answers through native Harmony tool calls; Ollama returned these in `tool_calls` with empty `content`, which the engine ignored. gpt-oss also sends `execute` code as raw text, which Ollama rejects with HTTP 500. Both cases are now converted to ReAct `Action`/`Args` text, with `reasoning_effort=low` and `max_tokens=8192`.
 - **Caveat:** in the first F8 floor attempt, 2 cells ended on Ollama 500s, leaving 1 correct out of 4 valid cells. I wrote a stop rule into this file before re-running anything, and under it only those two cells were re-run (`--resume`) after the 500 fix. One of them, P06/inline, became the second pass. The pass is narrow: 2/6, both on P06.
+- **Repeatability:** gpt-oss is not deterministic here, even at temperature 0 and seed 1. P06/inline has been run three times: `error` (Ollama 500s, before the fix), `max_rounds` with no answer in the diagnostic re-run `diag_gptoss_500` (before the fix, which never hit the 500 that time), and `finished` and correct in the official resume. So the second floor pass rests on a cell that gave three different outcomes. Under the pre-written stop rule only the official batch counts, but read the pass as borderline.
 
 ### Matrix progress
 - Batch `matrix_gptoss_v1`, model `pc-gptoss20b`, 52 runs: P01–P12 × 3 arms, plus C01–C08 × noparam/pack. It was launched detached through WMI at 06:10 IST, so it survives this session ending. Frozen hashes were verified before launch, and the runner checks them before and after every run.
@@ -54,11 +55,14 @@ Totals: gpt-oss after F8 **2/6** · Gemini **1/6** · Qwen 3.5 **0/6** · Qwen2.
 3. **Harness changes made before the matrix** (details below): **F7** labels quota from structured errors only, enforces the RPM limit per call, and writes the heartbeat file. **F8** handles gpt-oss tool calls, recovers raw-code 500s, sets `reasoning_effort=low` and `max_tokens=8192`, and fixes the empty-reply placeholder. The placeholder fix applies to every model, so the Qwen floors were measured under the older harness; it only affects empty replies.
 4. **The floor pass is narrow:** 2/6, both on P06, and no model has ever produced P01's 93. If the matrix shows the same `intersects`-rule pattern on P01/P02/P11/P12, consider whether the facility-rule wording needs a bench v2. **Nothing in the benchmark was changed.**
 5. **Observability gap:** `trace.jsonl` does not store the raw model reply, so tool/argument mismatches (such as Gemini P06/pack) cannot be fully diagnosed. I did not change this mid-matrix; it is worth adding before Phase 6.
-6. Phase 6 (score, read at least 10 failed traces, write REPORT/README/INTERVIEW_PREP) and the GitHub push are waiting for you.
+6. **One sample per cell:** the matrix runs each cell once, and gpt-oss gives different outcomes on repeats (see Repeatability above). Paired-arm differences should be reported as descriptive only; consider repeats for key cells if you want stronger claims.
+7. Phase 6 (score, read at least 10 failed traces, write REPORT/README/INTERVIEW_PREP) and the GitHub push are waiting for you.
 
 ## Earlier status (superseded by the Morning summary): Phase 5 STOP — all candidate models were below the 2/6 floor before F8
 
 ## Model selection
+
+> **Superseded on 2026-11-17:** after the F8 integration fix, gpt-oss:20b passed the floor (2/6) and Kirito's explicit unattended instruction authorised the local 52-run matrix (`matrix_gptoss_v1`, running). That instruction also overrides AGENTS.md's "never start the full matrix" for this matrix. See the Morning summary at the top.
 
 ### Qwen2.5-Coder:7B — below the floor
 
@@ -191,6 +195,8 @@ All runs used GISReActAgent on examples\urban-heat-madison, task "Compute the me
 - 2026-11-17: matrix batches are launched with `kerala/tools/launch_detached.ps1` (WMI `Win32_Process.Create`, outside the agent session's job object; always `--resume`). The first `Start-Process` launch was stopped after ~1 min and its partial P01/noparam folder deleted (no meta.json); layers verified intact (9 files, frozen test passed).
 
 ## Needs Kirito
+
+> **Superseded on 2026-11-17:** after the F8 integration fix, gpt-oss:20b passed the floor (2/6) and Kirito's explicit unattended instruction authorised the local 52-run matrix (`matrix_gptoss_v1`, running). That instruction also overrides AGENTS.md's "never start the full matrix" for this matrix. See the Morning summary at the top.
 - Gold was approved and frozen. Do not edit `questions.yaml`, `rubric.yaml`, `gold.json`, `kerala_pack.yaml`, or the top-level `data/kerala/layers/` files; the frozen test guards their approved hashes and layer listing.
 - The approved post-F6 rerun scored 0/6 correct on the unchanged P01/P06 floor check (0/6 correct under own defensible parameters). The two-of-six rule requires STOP; do not run the matrix. The detailed table and first trace errors are recorded below and in `REPORT.md`.
 - If Kirito later authorizes another floor pilot, consider replacing P01/P06 with the simpler raster-only P05/P08 pair (VV open-water area and low-lying area). This is a proposal only; no question, gold value, or current STOP decision was changed.
@@ -429,6 +435,8 @@ These are the nine original smoke runs; the failure modes show that the below-fl
 
 ### Model selection: PC candidates — both below the floor
 
+> **Superseded on 2026-11-17:** after the F8 integration fix, gpt-oss:20b passed the floor (2/6) and Kirito's explicit unattended instruction authorised the local 52-run matrix (`matrix_gptoss_v1`, running). That instruction also overrides AGENTS.md's "never start the full matrix" for this matrix. See the Morning summary at the top.
+
 The authorized selection script ran the same six cells for each candidate in sequence and stopped after the second score. Commands:
 
 ```powershell
@@ -460,6 +468,8 @@ The supervisor log is `logs/machine_setup/wait_then_run_selection.out.log`; each
 The 52-run serial extrapolations from each six-run mean are 7.76 hours for `pc-gptoss20b` and 3.39 hours for `pc-qwen35-9b`. These are timing-only estimates from below-floor candidates, not authorization to run a matrix. No model is selected, so there is no runnable matrix command; the 52-run matrix remains stopped pending Kirito's next decision.
 
 #### Needs Kirito
+
+> **Superseded on 2026-11-17:** after the F8 integration fix, gpt-oss:20b passed the floor (2/6) and Kirito's explicit unattended instruction authorised the local 52-run matrix (`matrix_gptoss_v1`, running). That instruction also overrides AGENTS.md's "never start the full matrix" for this matrix. See the Morning summary at the top.
 
 Both PC candidates scored 0/6, so keep the STOP gate. A next pilot could first fix and verify the local reasoning/tool-call response path before repeating the same P01/P06 floor, or use the previously proposed raster-only P05/P08 pair. This proposal changes no gold value or tolerance. The model configs, `max_rounds=16`, and documented per-run tables are ready for review.
 
