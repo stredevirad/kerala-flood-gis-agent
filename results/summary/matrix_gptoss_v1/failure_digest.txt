@@ -1,0 +1,190 @@
+== C02/noparam tax=FORMAT exit=max_rounds rounds=16 packcalls=0 ans=NO ANSWER gold=('ok', 2058.921864)
+   actions: {'list_files': 1, 'geoprocess': 3, 'load_vector': 4, 'inspect': 6, 'commentary': 2} | last: geoprocess
+    r2 geoprocess: ❌ Unknown geoprocess op 'load_vector'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cen
+    r4 inspect: ❌ Variable 'roads_clip_len' does not exist. Available variables: districts, col, uniques
+    r5 geoprocess: ❌ Unknown geoprocess op 'inspect'. Available: add_field, aspect, attribute_join, bounding_box, buffer, centroi
+== C02/pack tax=FORMAT exit=max_rounds rounds=14 packcalls=0 ans=NO ANSWER gold=('ok', 2058.921864)
+   actions: {'list_files': 4, 'geoprocess': 2, 'load_vector': 3, 'execute': 4, 'commentary': 1} | last: execute
+    r2 geoprocess: ❌ Unknown geoprocess op 'load_vector'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cen
+    r4 execute: ❌ Execution failed
+    r5 load_vector: ❌ Execution failed
+== C04/noparam tax=TOOL_BUG exit=finished rounds=7 packcalls=0 ans=('ok', 0) gold=('ok', 543)
+   actions: {'geoprocess': 2, 'load_vector': 2, 'execute': 2, 'finish': 1} | last: finish
+    r2 geoprocess: ❌ Unknown geoprocess op 'load_vector'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cen
+    r6 execute: ❌ Execution failed
+== C05/noparam tax=FORMAT exit=max_rounds rounds=15 packcalls=0 ans=NO ANSWER gold=('ok', 1.546613)
+   actions: {'geoprocess': 7, 'load_vector': 5, 'inspect': 1, 'list_files': 1, 'execute': 1} | last: geoprocess
+    r3 geoprocess: ❌ Tool 'geoprocess' argument error: GISToolkit.geoprocess() got an unexpected keyword argument 'var_name'
+    r4 inspect: ❌ Variable 'zonal_stats' does not exist. Available variables: taluks, col, uniques
+    r7 geoprocess: ❌ Tool 'geoprocess' argument error: GISToolkit.geoprocess() got an unexpected keyword argument 'var_name'
+== C05/pack tax=FORMAT exit=finished rounds=10 packcalls=0 ans=NO ANSWER gold=('ok', 1.546613)
+   actions: {'load_vector': 3, 'inspect': 1, 'geoprocess': 5, 'finish': 1} | last: finish
+    r7 geoprocess: ❌ Tool 'geoprocess' argument error: GISToolkit.geoprocess() got an unexpected keyword argument 'path'
+    r8 geoprocess: ❌ Tool 'geoprocess' argument error: GISToolkit.geoprocess() got an unexpected keyword argument 'path'
+    r9 geoprocess: ❌ Tool 'geoprocess' argument error: GISToolkit.geoprocess() got an unexpected keyword argument 'path'
+== C06/noparam tax=FORMAT exit=max_rounds rounds=12 packcalls=0 ans=NO ANSWER gold=('ok', 57.604372)
+   actions: {'load_vector': 6, 'inspect': 4, 'geoprocess': 1, 'list_files': 1} | last: list_files
+    r4 inspect: ❌ Variable 'flood_clip_area' does not exist. Available variables: districts, col, uniques
+    r6 inspect: ❌ Variable 'flood_clip_area' does not exist. Available variables: districts, col, uniques, flood
+    r8 inspect: ❌ Variable 'flood_clip_area' does not exist. Available variables: districts, col, uniques, flood
+== C06/pack tax=LOGIC exit=finished rounds=7 packcalls=0 ans=('ok', 336.46560204636177) gold=('ok', 57.604372)
+   actions: {'load_vector': 2, 'geoprocess': 2, 'execute': 2, 'finish': 1} | last: finish
+    r2 geoprocess: ❌ Unknown geoprocess op 'load_vector'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cen
+== C07/noparam tax=FORMAT exit=finished rounds=14 packcalls=0 ans=NO ANSWER gold=('cannot_answer', None)
+   actions: {'geoprocess': 4, 'load_vector': 7, 'inspect': 2, 'execute': 1} | last: load_vector
+    r3 inspect: ❌ Variable 'hospitals_utm' does not exist. Available variables: hospitals, col, uniques
+    r7 execute: ❌ Execution failed
+    r8 inspect: ❌ Variable 'flood_alappuzha' does not exist. Available variables: hospitals, col, uniques, hospitals_utm
+== C07/pack tax=UNANSWERABLE_ANSWERED exit=finished rounds=12 packcalls=0 ans=('ok', 5) gold=('cannot_answer', None)
+   actions: {'geoprocess': 3, 'load_vector': 2, 'execute': 6, 'finish': 1} | last: finish
+    r2 geoprocess: ❌ Unknown geoprocess op 'load_vector'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cen
+    r4 geoprocess: ❌ Unknown geoprocess op 'list_files'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cent
+    r5 execute: ❌ Execution failed
+== P01/inline tax=TOOL_BUG exit=finished rounds=10 packcalls=0 ans=('ok', 2) gold=('ok', 93)
+   actions: {'geoprocess': 2, 'load_vector': 2, 'list_files': 4, 'execute': 1, 'finish': 1} | last: finish
+    r2 geoprocess: ❌ Unknown geoprocess op 'load_vector'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cen
+    r7 list_files: ❌ Tool 'list_files' argument error: GISToolkit.list_files() got an unexpected keyword argument 'path'
+== P01/noparam tax=TOOL_BUG exit=finished rounds=16 packcalls=0 ans=('ok', 82) gold=('ok', 93)
+   actions: {'geoprocess': 9, 'list_files': 1, 'load_vector': 3, 'execute': 2, 'finish': 1} | last: finish
+    r2 geoprocess: ❌ Unknown geoprocess op 'list_files'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cent
+    r3 geoprocess: ❌ Unknown geoprocess op 'list_files'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cent
+    r5 geoprocess: ❌ Unknown geoprocess op 'load_vector'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cen
+== P01/pack tax=TOOL_BUG exit=finished rounds=16 packcalls=2 ans=('ok', 174) gold=('ok', 93)
+   actions: {'domain_param': 2, 'geoprocess': 8, 'load_vector': 3, 'inspect': 1, 'execute': 1, 'finish': 1} | last: finish
+    r4 geoprocess: ❌ Tool 'geoprocess' argument error: GISToolkit.geoprocess() got an unexpected keyword argument 'var_name'
+== P02/inline tax=TOOL_BUG exit=finished rounds=15 packcalls=0 ans=('ok', 85) gold=('ok', 226)
+   actions: {'geoprocess': 6, 'load_vector': 4, 'inspect': 3, 'execute': 2} | last: execute
+    r3 geoprocess: ❌ Unknown geoprocess op 'inspect'. Available: add_field, aspect, attribute_join, bounding_box, buffer, centroi
+    r4 inspect: ❌ Variable 'schools_flooded' does not exist. Available variables: schools, col, uniques
+    r7 inspect: ❌ Variable 'schools_flooded' does not exist. Available variables: schools, col, uniques
+== P02/noparam tax=FORMAT exit=finished rounds=16 packcalls=0 ans=NO ANSWER gold=('ok', 226)
+   actions: {'geoprocess': 11, 'load_vector': 5} | last: geoprocess
+    r3 geoprocess: ❌ Unknown geoprocess op 'inspect'. Available: add_field, aspect, attribute_join, bounding_box, buffer, centroi
+    r8 geoprocess: ❌ Unknown geoprocess op 'inspect'. Available: add_field, aspect, attribute_join, bounding_box, buffer, centroi
+    r11 geoprocess: ❌ Unknown geoprocess op 'load_vector'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cen
+== P02/pack tax=FORMAT exit=finished rounds=15 packcalls=1 ans=NO ANSWER gold=('ok', 226)
+   actions: {'geoprocess': 9, 'commentary': 2, 'list_files': 1, 'domain_param': 1, 'execute': 1, 'inspect': 1} | last: inspect
+    r2 geoprocess: ❌ Unknown geoprocess op 'list_files'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cent
+    r3 geoprocess: ❌ Unknown geoprocess op 'load_vector'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cen
+    r4 geoprocess: ❌ Unknown geoprocess op 'list_files'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cent
+== P03/inline tax=TOOL_BUG exit=finished rounds=13 packcalls=0 ans=('ok', 7) gold=('ok', 8)
+   actions: {'geoprocess': 6, 'list_files': 1, 'load_vector': 1, 'execute': 4, 'finish': 1} | last: finish
+    r3 geoprocess: ❌ Unknown geoprocess op 'list_files'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cent
+    r5 geoprocess: ❌ Unknown geoprocess op 'load_vector'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cen
+    r8 geoprocess: ❌ Tool 'geoprocess' argument error: GISToolkit.geoprocess() got an unexpected keyword argument 'args'
+== P03/noparam tax=FORMAT exit=finished rounds=12 packcalls=0 ans=NO ANSWER gold=('ok', 8)
+   actions: {'execute': 3, 'geoprocess': 1, 'load_vector': 1, 'inspect': 6, 'finish': 1} | last: finish
+    r1 execute: ❌ Execution failed
+    r2 execute: ❌ Execution failed
+    r5 inspect: ❌ Variable 'answer' does not exist. Available variables: districts, schools, hospitals, alappuzha, json, schoo
+== P03/pack tax=FORMAT exit=max_rounds rounds=7 packcalls=1 ans=NO ANSWER gold=('ok', 8)
+   actions: {'geoprocess': 3, 'list_files': 1, 'execute': 2, 'domain_param': 1} | last: domain_param
+    r10 geoprocess: ❌ Unknown geoprocess op 'list_files'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cent
+    r13 geoprocess: ❌ Unknown geoprocess op 'load_vector'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cen
+    r14 execute: ❌ Execution failed
+== P04/inline tax=TOOL_BUG exit=finished rounds=16 packcalls=0 ans=('ok', 37) gold=('ok', 'Kothamangalam')
+   actions: {'list_files': 2, 'geoprocess': 8, 'load_vector': 3, 'execute': 3} | last: list_files
+    r2 geoprocess: ❌ Tool 'geoprocess' argument error: GISToolkit.geoprocess() got an unexpected keyword argument 'var_name'
+    r13 execute: ❌ Execution failed
+== P04/noparam tax=TOOL_BUG exit=finished rounds=13 packcalls=0 ans=('ok', 216) gold=('ok', 'Kothamangalam')
+   actions: {'execute': 4, 'geoprocess': 4, 'load_vector': 1, 'inspect': 3, 'list_files': 1} | last: list_files
+    r1 execute: ❌ Execution failed
+    r3 geoprocess: ❌ Unknown geoprocess op 'load_vector'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cen
+    r6 inspect: ❌ Variable 'answer' does not exist. Available variables: json, taluks, schools, hospitals, taluks_sel, schools
+== P04/pack tax=FORMAT exit=max_rounds rounds=10 packcalls=1 ans=NO ANSWER gold=('ok', 'Kothamangalam')
+   actions: {'geoprocess': 6, 'list_files': 1, 'load_vector': 2, 'domain_param': 1} | last: geoprocess
+    r8 geoprocess: ❌ Unknown geoprocess op 'list_files'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cent
+    r10 geoprocess: ❌ Unknown geoprocess op 'list_files'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cent
+    r11 geoprocess: ❌ Unknown geoprocess op 'load_vector'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cen
+== P05/inline tax=FORMAT exit=max_rounds rounds=11 packcalls=0 ans=NO ANSWER gold=('ok', 402.5898)
+   actions: {'list_files': 2, 'container': 4, 'load_raster': 1, 'execute': 3, 'geoprocess': 1} | last: geoprocess
+    r2 container: ❌ Unknown tool 'container'. Available tools: list_files, load_vector, load_raster, geoprocess, execute, inspec
+    r3 container: ❌ Unknown tool 'container'. Available tools: list_files, load_vector, load_raster, geoprocess, execute, inspec
+    r8 execute: ❌ Execution failed
+== P05/noparam tax=TOOL_BUG exit=finished rounds=13 packcalls=0 ans=('ok', 12.345) gold=('ok', 402.5898)
+   actions: {'load_vector': 3, 'load_raster': 1, 'execute': 5, 'commentary': 1, 'list_files': 2, 'finish': 1} | last: finish
+    r4 execute: ❌ Execution failed
+    r6 commentary: ❌ Unknown tool 'commentary'. Available tools: list_files, load_vector, load_raster, geoprocess, execute, inspe
+    r9 execute: ❌ Execution failed
+== P05/pack tax=FORMAT exit=finished rounds=16 packcalls=2 ans=NO ANSWER gold=('ok', 402.5898)
+   actions: {'list_files': 1, 'domain_param': 2, 'geoprocess': 9, 'load_vector': 2, 'inspect': 2} | last: load_vector
+    r5 geoprocess: ❌ Tool 'geoprocess' argument error: GISToolkit.geoprocess() got an unexpected keyword argument 'var_name'
+    r6 geoprocess: ❌ Unknown geoprocess op 'load_vector'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cen
+    r12 inspect: ❌ Variable 'vv' does not exist. Available variables: districts, col, uniques, alappuzha
+== P06/inline tax=FORMAT exit=max_rounds rounds=14 packcalls=0 ans=NO ANSWER gold=('ok', 57.6)
+   actions: {'geoprocess': 9, 'list_files': 1, 'load_vector': 2, 'load_raster': 2} | last: geoprocess
+    r4 geoprocess: ❌ Tool 'geoprocess' argument error: GISToolkit.geoprocess() got an unexpected keyword argument 'var_name'
+    r5 geoprocess: ❌ Unknown geoprocess op 'list_files'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cent
+    r6 geoprocess: ❌ Unknown geoprocess op 'list_files'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cent
+== P06/noparam tax=FORMAT exit=finished rounds=10 packcalls=0 ans=NO ANSWER gold=('ok', 57.6)
+   actions: {'load_raster': 2, 'geoprocess': 8} | last: geoprocess
+    r6 geoprocess: ❌ Tool 'geoprocess' argument error: GISToolkit.geoprocess() got an unexpected keyword argument 'args'
+    r7 geoprocess: ❌ Tool 'geoprocess' argument error: GISToolkit.geoprocess() got an unexpected keyword argument 'args'
+    r11 geoprocess: ❌ Unknown geoprocess op 'list_files'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cent
+== P06/pack tax=FORMAT exit=max_rounds rounds=16 packcalls=4 ans=NO ANSWER gold=('ok', 57.6)
+   actions: {'domain_param': 4, 'commentary': 1, 'geoprocess': 3, 'load_vector': 1, 'load_raster': 4, 'execute': 3} | last: execute
+    r3 commentary: ❌ Unknown tool 'commentary'. Available tools: list_files, load_vector, load_raster, geoprocess, execute, inspe
+    r8 geoprocess: ❌ Unknown geoprocess op 'load_raster'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cen
+    r11 execute: ❌ Execution failed
+== P07/noparam tax=FORMAT exit=finished rounds=16 packcalls=0 ans=NO ANSWER gold=('ok', 56.236341)
+   actions: {'execute': 8, 'list_files': 1, 'load_vector': 2, 'inspect': 1, 'geoprocess': 3, 'load_raster': 1} | last: geoprocess
+    r1 execute: ❌ Execution failed
+    r2 execute: ❌ Execution failed
+    r3 execute: ❌ Execution failed
+== P07/pack tax=FORMAT exit=max_rounds rounds=14 packcalls=1 ans=NO ANSWER gold=('ok', 56.236341)
+   actions: {'geoprocess': 4, 'list_files': 5, 'load_vector': 1, 'execute': 3, 'domain_param': 1} | last: list_files
+    r2 geoprocess: ❌ Unknown geoprocess op 'load_vector'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cen
+    r3 geoprocess: ❌ Unknown geoprocess op 'load_vector'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cen
+    r4 geoprocess: ❌ Unknown geoprocess op 'load_vector'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cen
+== P08/inline tax=TOOL_BUG exit=finished rounds=14 packcalls=0 ans=('ok', 323.643) gold=('ok', 278.8056)
+   actions: {'geoprocess': 8, 'list_files': 1, 'load_vector': 2, 'load_raster': 1, 'execute': 1, 'finish': 1} | last: finish
+    r3 geoprocess: ❌ Unknown geoprocess op 'list_files'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cent
+    r5 geoprocess: ❌ Unknown geoprocess op 'load_vector'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cen
+    r7 geoprocess: ❌ Unknown geoprocess op 'load_vector'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cen
+== P09/inline tax=FORMAT exit=finished rounds=13 packcalls=0 ans=NO ANSWER gold=('ok', 407)
+   actions: {'geoprocess': 6, 'load_vector': 2, 'execute': 4, 'load_raster': 1} | last: execute
+    r2 geoprocess: ❌ Unknown geoprocess op 'load_vector'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cen
+    r4 execute: ❌ Execution failed
+    r5 execute: ❌ Execution failed
+== P09/noparam tax=FORMAT exit=finished rounds=16 packcalls=0 ans=NO ANSWER gold=('ok', 407)
+   actions: {'geoprocess': 9, 'list_files': 1, 'load_vector': 2, 'execute': 1, 'load_raster': 1, 'inspect': 2} | last: geoprocess
+    r2 geoprocess: ❌ Unknown geoprocess op 'list_files'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cent
+    r4 geoprocess: ❌ Unknown geoprocess op 'load_vector'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cen
+    r7 execute: ❌ Execution failed
+== P09/pack tax=FORMAT exit=max_rounds rounds=13 packcalls=1 ans=NO ANSWER gold=('ok', 407)
+   actions: {'list_files': 1, 'geoprocess': 1, 'load_vector': 3, 'execute': 7, 'domain_param': 1} | last: load_vector
+    r2 geoprocess: ❌ Unknown geoprocess op 'load_vector'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cen
+    r4 execute: ❌ Execution failed
+    r6 execute: ❌ Execution failed
+== P10/inline tax=LOGIC exit=finished rounds=8 packcalls=0 ans=('ok', 'Kochi') gold=('ok', 'Kuttanad')
+   actions: {'execute': 4, 'list_files': 2, 'commentary': 1, 'finish': 1} | last: finish
+    r4 commentary: ❌ Unknown tool 'commentary'. Available tools: list_files, load_vector, load_raster, geoprocess, execute, inspe
+== P11/inline tax=FORMAT exit=max_rounds rounds=13 packcalls=0 ans=NO ANSWER gold=('ok', 68)
+   actions: {'geoprocess': 5, 'load_vector': 2, 'list_files': 1, 'execute': 5} | last: execute
+    r2 geoprocess: ❌ Unknown geoprocess op 'list_files'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cent
+    r3 geoprocess: ❌ Unknown geoprocess op 'list_files'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cent
+    r6 execute: ❌ Execution failed
+== P11/noparam tax=FORMAT exit=finished rounds=16 packcalls=0 ans=NO ANSWER gold=('ok', 68)
+   actions: {'geoprocess': 11, 'load_vector': 3, 'list_files': 1, 'load_raster': 1} | last: load_raster
+    r2 geoprocess: ❌ Tool 'geoprocess' argument error: GISToolkit.geoprocess() got an unexpected keyword argument 'var_name'
+    r3 geoprocess: ❌ Unknown geoprocess op 'load_vector'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cen
+    r4 geoprocess: ❌ Unknown geoprocess op 'load_vector'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cen
+== P11/pack tax=FORMAT exit=finished rounds=15 packcalls=2 ans=NO ANSWER gold=('ok', 68)
+   actions: {'geoprocess': 8, 'domain_param': 2, 'commentary': 2, 'load_vector': 3} | last: geoprocess
+    r2 geoprocess: ❌ Unknown geoprocess op 'list_files'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cent
+    r3 geoprocess: ❌ Unknown geoprocess op 'list_files'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cent
+    r4 geoprocess: ❌ Unknown geoprocess op 'list_files'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cent
+== P12/inline tax=TOOL_BUG exit=finished rounds=15 packcalls=0 ans=('ok', 0) gold=('ok', 215)
+   actions: {'geoprocess': 8, 'load_vector': 5, 'inspect': 1, 'execute': 1} | last: load_vector
+    r2 geoprocess: ❌ Unknown geoprocess op 'list_files'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cent
+    r3 geoprocess: ❌ Unknown geoprocess op 'list_files'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cent
+    r4 geoprocess: ❌ Unknown geoprocess op 'list_files'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cent
+== P12/noparam tax=FORMAT exit=finished rounds=16 packcalls=0 ans=NO ANSWER gold=('ok', 215)
+   actions: {'load_vector': 4, 'geoprocess': 12} | last: geoprocess
+    r7 geoprocess: ❌ Tool 'geoprocess' argument error: GISToolkit.geoprocess() got an unexpected keyword argument 'path'
+    r8 geoprocess: ❌ Tool 'geoprocess' argument error: GISToolkit.geoprocess() got an unexpected keyword argument 'path'
+== P12/pack tax=FORMAT exit=finished rounds=16 packcalls=2 ans=NO ANSWER gold=('ok', 215)
+   actions: {'geoprocess': 10, 'load_vector': 4, 'domain_param': 2} | last: geoprocess
+    r2 geoprocess: ❌ Unknown geoprocess op 'list_files'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cent
+    r3 geoprocess: ❌ Unknown geoprocess op 'list_files'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cent
+    r6 geoprocess: ❌ Unknown geoprocess op 'load_vector'. Available: add_field, aspect, attribute_join, bounding_box, buffer, cen

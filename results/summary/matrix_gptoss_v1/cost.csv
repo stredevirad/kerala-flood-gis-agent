@@ -1,0 +1,4 @@
+model,arm,runs,correct,minutes,tokens,minutes_per_correct,tokens_per_correct
+pc-gptoss20b,inline,12,1,45.07,1024083,45.07,1024083
+pc-gptoss20b,noparam,20,5,69.72,1546506,13.94,309301
+pc-gptoss20b,pack,20,6,67.73,1426057,11.29,237676
