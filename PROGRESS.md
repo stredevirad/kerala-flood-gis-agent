@@ -541,5 +541,5 @@ Output: `35 passed in 2.04s`.
 
 ## Phase 5 matrix: `matrix_gptoss_v1` (gpt-oss:20b, local)
 
-- Launch: `powershell -NoProfile -ExecutionPolicy Bypass -File kerala	ools\launch_detached.ps1 -Model pc-gptoss20b -Batch matrix_gptoss_v1` at 2026-11-17 06:10 IST (commit `c6f8e08`; frozen test `1 passed` just before). Plan verified with `--dry-run`: 52 runs. Note: `--questions all` would plan 58, because it includes D01–D03, so the launcher passes P01–P12 and C01–C08 explicitly.
+- Launch: `powershell -NoProfile -ExecutionPolicy Bypass -File kerala\tools\launch_detached.ps1 -Model pc-gptoss20b -Batch matrix_gptoss_v1` at 2026-11-17 06:10 IST (commit `c6f8e08`; frozen test `1 passed` just before). Plan verified with `--dry-run`: 52 runs. Note: `--questions all` would plan 58, because it includes D01–D03, so the launcher passes P01–P12 and C01–C08 explicitly.
 - Status at 06:13: 1/52 done; last line: `done 1/52 P01/noparam: finished; ETA 133.3 min`.
