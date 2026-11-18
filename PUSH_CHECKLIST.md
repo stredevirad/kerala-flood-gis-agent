@@ -1,5 +1,12 @@
 # Push checklist
 
+**Status 2026-11-18 (final cleanup).**
+- The repo `stredevirad/kerala-flood-gis-agent` is pushed.
+- Repeat-1 run files are committed and scrubbed.
+- The new front-page README, description and topics are set.
+- A clean clone passes every check (PROGRESS.md, "Final cleanup session").
+- ⚠️ GitHub reports the repo as **PUBLIC**: a `PublicEvent` at 12:02 UTC by the account owner. To make it private again: `gh repo edit stredevirad/kerala-flood-gis-agent --visibility private --accept-visibility-change-consequences`.
+
 **Update 2026-11-18 (publish session).**
 - The PC user name was removed from all history with git-filter-repo, and all commits are authored as `stredevirad <186323128+stredevirad@users.noreply.github.com>`. The decision in §1 is therefore resolved: the trace pages now use repo-relative paths.
 - The push in §4 was run in this session. See PROGRESS.md "Publish session" for the result.

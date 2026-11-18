@@ -1,4 +1,27 @@
 # PROGRESS
+## Final cleanup session (2026-11-18, laptop)
+
+1. **Reproducibility.** Before this session, nothing under `results/runs/` was tracked.
+   - Committed the 314 repeat-1 files that `score.py`, `trace_html` and `failure_report` read: `meta.json`, `answer.json`, `attempts/*`, `code.py`, `trace.jsonl`, `checker.jsonl` and `pack_calls.jsonl` (about 7 MB; commit `fbc05ef`, force-added past the ignore rules).
+   - Before committing, every form of the PC user name was replaced with `pc-user` in place, byte-level (script `logs/laptop/scrub_r1.py`). 51 files contained it; 0 remain, and 0 are in the staged blobs. No frozen file contained it.
+   - A re-score after the scrub is identical to the committed summary.
+   - Not committed: `pred_results/`, `dataset` links, `heartbeat.json`, other batches, repeat 2 (untouched), logs, `.venv`, `.env`, `results/_profile`.
+2. **Front page.** The GISclaw README was renamed to `README_GISCLAW.md`. The new root `README.md` has the summary, headline results, findings, quick start, links, credits, AGPL-3.0-or-later statement, data attributions and the AI-agents line. `LICENSE` is unchanged. Note: `desktop/build_*.ps1/.sh` copy `README.md` into GISclaw desktop builds; `desktop/` was left untouched.
+3. **Links.** New `kerala/tools/link_check.py`: 23 relative links in the 4 docs, 0 broken. `kerala/tools/number_check.py` now also covers `README.md` (32/32 listed).
+4. **Size.** The largest tracked files are `s1_vv_20180821_db.tif` 15.22 MB, `dem_cop30.tif` 13.93 MB and `C03/pack/trace.jsonl` 5.54 MB. Nothing is over 50 MB.
+5. **Repo info.** The description and the 8 topics were set with `gh repo edit`.
+   - **Visibility note:** the GitHub API reports the repo as **public**. Its event log has a `PublicEvent` at 2026-11-18T12:02:08Z by `stredevirad`, just after the publish session's last check, which showed PRIVATE. No command in these sessions changed visibility, and it was not changed back (instruction: never change visibility). Reported to Kirito.
+6. **Clean-clone test** (`gh repo clone` into `D:\clone_test`, HEAD `9d7a8b2`):
+   - venv built exactly as `README.md` says;
+   - Kerala suite `78 passed`, frozen `1 passed`, `gold --check` passed;
+   - re-score: `Scored 52 runs`, 12/52 (noparam 5/20 with 2 correct_given_own_params, inline 1/12, pack 6/20), and `cost.csv` identical;
+   - `per_run.csv` content identical (line endings only); `results_tables.md` loses its appended sections, as documented;
+   - link check 0 broken; the 5 trace pages open with their headers and contain no outgoing links;
+   - the PC user name: 0 in the tree, 0 in `git log -p --all`;
+   - secret scan of 86 commits: only GISclaw's fake `sk-abcd…` fixture, and no `.env` ever committed.
+   
+   `D:\clone_test` was deleted afterwards.
+
 ## Publish session (2026-11-18, laptop): PC user name scrub, history rewrite, push
 
 1. **Backup.** `robocopy D:\GISclaw_bundle D:\GISclaw_backup_prefilter /E /SL /COPY:DAT` copied 44,285 files (2.654 GB). The backup's git works (HEAD `8e56765`, the pre-rewrite history).
