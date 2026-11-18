@@ -20,6 +20,7 @@
    - The name in any form: 0 in `git log -p --all --text`, 0 in commit messages and identities, 0 in tracked files, 0 in every blob of every commit.
    - `git log --all --format="%an <%ae> | %cn <%ce>"` gives one distinct line: `stredevirad <186323128+stredevirad@users.noreply.github.com> | stredevirad <186323128+stredevirad@users.noreply.github.com>`.
    - Secret scan re-run over the tree and all 82 commits (`logs/laptop/secret_scan_postfilter.log`): no real keys. The only hit is still the upstream fake fixture `sk-abcd…` in `tests/test_smoke.py`. No `.env` was ever committed; the only `.env*` files in history are the two blank `.env.example`.
+   - After the push, the step-8 check found one tracked file under `results/_profile/`: `example_prompt_P01_noparam.txt`, an example system prompt, scanned clean. It was untracked with `git rm --cached` (the local file is kept, and the folder is git-ignored) and pushed as a normal commit. It stays in earlier history; no force-push was made.
    - Note: 22 commit messages keep a `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` trailer from the earlier Claude Code sessions. The task asked only for author and committer mapping, so the trailers were not changed.
 
 ## Morning summary (laptop session, 2026-11-18)
