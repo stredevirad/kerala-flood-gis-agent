@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import html
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -42,6 +43,28 @@ def _load_json(path: Path) -> Any:
         return None
 
 
+# Absolute Windows paths recorded on the machine that ran the agent, in single- or
+# double-backslash (JSON/repr) form. Paths inside a checkout of this repo become
+# repo-relative; any other path under a user profile keeps only "<user-home>".
+_SEP = r"(?:\\{1,2}|/)"
+_REPO_PREFIX = re.compile(rf"(?<![A-Za-z])[A-Za-z]:(?:{_SEP}[^\\/\r\n\"'<>|*?]+?)*?{_SEP}GISclaw(?:_bundle|-main)?{_SEP}")
+_USER_HOME = re.compile(rf"(?<![A-Za-z])[A-Za-z]:{_SEP}Users{_SEP}[^\\/\r\n\"'<>|*?]+(?={_SEP})")
+
+
+def relativize_paths(text: str) -> str:
+    """Strip machine-specific absolute prefixes so the page shows repo-relative paths."""
+    text = _REPO_PREFIX.sub("", text)
+    return _USER_HOME.sub("<user-home>", text)
+
+
+def _display_path(run: Path) -> str:
+    try:
+        from kerala.config import ROOT
+        return run.resolve().relative_to(ROOT.resolve()).as_posix()
+    except (ImportError, ValueError):
+        return run.as_posix()
+
+
 def render(run: Path) -> str:
     events = []
     trace = run / "trace.jsonl"
@@ -59,7 +82,7 @@ def render(run: Path) -> str:
     rows = "".join(f"<tr><td class='muted'>{html.escape(k)}</td><td>{html.escape(str(meta.get(k)))}</td></tr>" for k in keys if k in meta)
     parts = [f"<!doctype html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
              f"<title>Trace {html.escape(title)}</title><style>{CSS}</style></head><body><main>",
-             f"<h1>{html.escape(title)}</h1><p class='muted'>{html.escape(str(run))}</p>",
+             f"<h1>{html.escape(title)}</h1><p class='muted'>{html.escape(_display_path(run))}</p>",
              f"<div class='card'><table>{rows}</table></div>",
              "<div class='card'><strong>Final answer.json</strong>" + (_pre(answer) if answer is not None else "<p class='muted'>none</p>") + "</div>"]
     for event in events:
@@ -83,7 +106,7 @@ def render(run: Path) -> str:
         block.append("</div>")
         parts.append("".join(block))
     parts.append("</main></body></html>")
-    return "".join(parts)
+    return relativize_paths("".join(parts))
 
 
 def main(argv: list[str] | None = None) -> int:
