@@ -57,6 +57,15 @@ powershell -NoProfile -ExecutionPolicy Bypass -File kerala\tools\launch_detached
 .\.venv\Scripts\python.exe -m kerala.bench.trace_html results\runs\matrix_gptoss_v1\pc-gptoss20b\P06\pack
 ```
 
+## Setup (Windows laptop)
+
+The project moved from the GPU PC to a Windows laptop (Intel Core Ultra 5, 16 GB RAM, no NVIDIA GPU, no Ollama) on 2026-11-18. On the laptop only local scoring, analysis and writing are done. No model is ever called.
+
+- The `.venv` copied from the PC did not work: its `pyvenv.cfg` pointed to the PC user's uv Python (`uv trampoline failed to spawn Python child process`). It was renamed to `.venv_pc_stale/`, which is git-ignored and safe to delete. A fresh venv was built with the commands in step 1 above: `uv venv --python 3.11 .venv`, then the same `uv pip install` line. uv 0.13.8 was already installed (WinGet).
+- Result: CPython 3.11.16, geopandas 1.2.0, rasterio 1.4.4 (GDAL 3.10.3). All geospatial wheels installed directly, so no fallback was needed. PowerShell 5.1 shows uv's normal stderr output as a red `NativeCommandError`; that is harmless.
+- Use **Windows git** (`git` in PowerShell; system `core.autocrlf=true`) for this checkout. The working tree has CRLF line endings, and the frozen hash of `kerala/bench/gold.json` was computed on its CRLF form. A git without autocrlf (for example WSL's) reports about 68 files as modified even though only line endings differ. Do not commit from such a git.
+- Checks on the laptop: Kerala suite `75 passed`, frozen-hash test `1 passed`. Re-scoring `matrix_gptoss_v1` gives the committed summary byte-for-byte (line endings aside).
+
 Model settings live in `kerala/models.yaml` (temperature 0, seed 1, 16 rounds, 300 s sandbox limit, 25-minute wall clock). The primary model is `gpt-oss:20b` with `reasoning_effort: low` and `max_tokens: 8192`. `cloud-flashlite` (`gemini-3.5-flash-lite`) is kept only to reproduce its floor-check record; it needs a `GEMINI_API_KEY` in the git-ignored `kerala/.env` and is not used by any default command.
 
 ## Layout

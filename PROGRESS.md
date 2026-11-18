@@ -1,4 +1,66 @@
 # PROGRESS
+## Laptop session checkpoint
+
+Session: 2026-11-18, Windows laptop, Claude Code via OpenClaw, following `LAPTOP_TASK.md`. No model runs. Repeat 1 only.
+
+- [x] **Step 1: setup and health check.**
+  - `.venv` rebuilt with uv. The PC copy is renamed to `.venv_pc_stale/`.
+  - Kerala suite `75 passed`; frozen test `1 passed`.
+  - meta.json counts: `matrix_gptoss_v1` **52/52**; `matrix_gptoss_v1_r2` **N = 35**.
+  - Re-score of r1: identical to the committed summary, 12/52 correct.
+  - Log: `logs/laptop/`.
+- [ ] Step 2: analysis (repeat 1 only)
+- [ ] Step 3: writing
+- [ ] Step 4: GitHub readiness (no push)
+- [ ] Step 5: Morning summary and final commit, then STOP
+
+Next: Step 2. Use Windows git (autocrlf=true) for commits. See README_KERALA "Setup (Windows laptop)".
+
+### Step 1 record (2026-11-18)
+
+**Venv.** The venv in the zip came from the PC: its `pyvenv.cfg` has `home = C:\Users\<PC user>\AppData\Roaming\uv\python\...`, and its python fails with `uv trampoline failed to spawn Python child process`. It was renamed to `.venv_pc_stale/` (git-ignored). A fresh venv was built:
+- `uv venv --python 3.11 .venv`
+- `uv pip install --python .venv\Scripts\python.exe -r desktop\requirements-desktop.txt -r requirements-dev.txt -r kerala\requirements-kerala.txt`
+
+The result is CPython 3.11.16, geopandas 1.2.0, rasterio 1.4.4, GDAL 3.10.3. No fallbacks were needed.
+
+**Tests.**
+- Kerala suite: `$t = Get-ChildItem tests -Filter "test_kerala_*.py" | ForEach-Object FullName; .\.venv\Scripts\python.exe -m pytest -q $t` → `75 passed in 28.73s`
+- Frozen test: `.\.venv\Scripts\python.exe -m pytest -q tests\test_kerala_frozen.py` → `1 passed in 0.05s`
+
+No environment fixes were needed.
+
+**Line endings.** This is not a failure, but it matters.
+- The working tree from the zip has CRLF endings.
+- WSL git (no autocrlf) showed 68 files as modified. `git diff --ignore-cr-at-eol` was empty for all of them.
+- Windows git (system `core.autocrlf=true`) shows the tree clean.
+- The frozen hash for `kerala/bench/gold.json` (`1037056…`) matches the **CRLF** working-tree file. The LF blob in git hashes to `ab413bd…`, so the frozen hashes were computed on Windows checkouts.
+- Frozen content and hashes were not touched. Commits are made only with Windows git.
+
+**Integrity (meta.json per batch under `results/runs/`).**
+
+| Batch | meta.json |
+|---|---:|
+| `matrix_gptoss_v1` | **52** |
+| `matrix_gptoss_v1_r2` | 35 (stopped; not used) |
+| `floor_gptoss_f8` | 6 |
+| `floor_cloud` | 6 |
+| `selection_pc_gptoss20b` | 6 |
+| `selection_pc_qwen35_9b` | 6 |
+| `diag_gptoss_500` | 2 |
+| `_archive_floor_gptoss_f8_errors` | 2 |
+| `diag_cloud_d01` | 1 |
+| `diag_gptoss_d01_f8` | 1 |
+| `diag_rawreply` | 1 |
+
+**Re-score.** `.\.venv\Scripts\python.exe -m kerala.bench.score --batch matrix_gptoss_v1 --out logs\laptop\rescore_r1` → `Scored 52 runs`.
+- `accuracy.csv`, `cost.csv`, `paired_tables.csv`, `per_run.csv`, `taxonomy_auto.csv` and `results_tables.md` are identical to `results/summary/matrix_gptoss_v1/` (`diff --strip-trailing-cr`).
+- 12/52 correct_final:
+  - noparam 5/20 (correct_given_own_params 2);
+  - inline 1/12;
+  - pack 6/20.
+- exit_reason: 40 finished, 12 max_rounds.
+
 ## Morning summary (Claude Code, unattended session 2026-11-17)
 
 **Status:** **gpt-oss:20b passed the Phase 5 floor gate (2/6)** once its integration was fixed. The **local 52-run matrix `matrix_gptoss_v1` is running detached** (launched 06:10 IST). Gemini scored 1/6, so there is no cloud matrix. Phase 6 has not started, and nothing was pushed.

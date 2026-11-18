@@ -18,6 +18,7 @@ app/server.log
 __pycache__/
 *.py[cod]
 .venv/
+.venv_pc_stale/
 venv/
 
 # OS / editor
