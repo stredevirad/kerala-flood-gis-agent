@@ -120,7 +120,7 @@ def analyse(batch: str, summary: Path) -> dict[str, Any]:
             "minutes": float(row["minutes"] or 0), "tokens": int(row["tokens"] or 0),
             "answer_written": answer is not None,
             "value": answer.get("value") if answer else None,
-            "errors": errors, "first_error": first,
+            "errors": errors, "first_error": first, "meta": meta,
             "actions": Counter(str(e.get("action")) for e in events),
         })
     return {"batch": batch, "runs": runs}
@@ -150,6 +150,24 @@ def render(result: dict[str, Any]) -> str:
             if group:
                 lines.append(f"| {arm} | {len(group)} | {sum(r['correct'] for r in group)} |")
     total_correct = sum(r["correct"] for r in runs)
+    metas = [r["meta"] for r in runs]
+
+    def _num(key: str) -> list[float]:
+        return [float(m[key]) for m in metas if isinstance(m.get(key), (int, float))]
+
+    lines += ["", "### Run statistics (from meta.json)", "", "| Statistic | Value |", "|---|---:|",
+              f"| exit_reason finished / max_rounds / other | {sum(m.get('exit_reason') == 'finished' for m in metas)} / "
+              f"{sum(m.get('exit_reason') == 'max_rounds' for m in metas)} / "
+              f"{sum(m.get('exit_reason') not in ('finished', 'max_rounds') for m in metas)} |",
+              f"| Total wall time (h) | {sum(_num('wall_seconds')) / 3600:.2f} |",
+              f"| Mean wall time per run (min) | {sum(_num('wall_seconds')) / 60 / max(len(metas), 1):.2f} |",
+              f"| Total rounds | {sum(_num('rounds')):.0f} |",
+              f"| Native tool calls rendered (F8) | {sum(_num('native_tool_calls')):.0f} |",
+              f"| Raw-code tool calls recovered from Ollama 500 (F8) | {sum(_num('recovered_tool_calls')):.0f} |",
+              f"| Largest per-call prompt (tokens) | {max(_num('max_prompt_tokens') or [0]):.0f} |",
+              f"| Peak system RAM (GB) | {max(_num('peak_system_ram_gb') or [0]):.2f} |",
+              f"| Peak VRAM used (MiB) | {max(_num('peak_vram_used_mib') or [0]):.0f} |",
+              f"| Quota errors | {sum(_num('quota_errors')):.0f} |"]
     lines += ["", f"Total: {len(runs)} runs, {total_correct} correct, {len(wrong)} incorrect.", "",
               "## Automatic taxonomy of the incorrect runs (score.py labels), by arm", "",
               "| Label | noparam | inline | pack | All |", "|---|---:|---:|---:|---:|"]

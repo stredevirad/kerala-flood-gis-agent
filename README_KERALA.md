@@ -51,10 +51,46 @@ $t = Get-ChildItem tests -Filter 'test_kerala_*.py' | ForEach-Object FullName; .
 # 6. The 52-run matrix, detached and resumable (re-run the same command to continue)
 powershell -NoProfile -ExecutionPolicy Bypass -File kerala\tools\launch_detached.ps1 -Model pc-gptoss20b -Batch matrix_gptoss_v1
 
-# 7. Score (one batch or several repeats), analyses, and a trace viewer
-.\.venv\Scripts\python.exe -m kerala.bench.score --batch matrix_gptoss_v1,matrix_gptoss_v1_r2
-.\.venv\Scripts\python.exe -m kerala.bench.analysis --first matrix_gptoss_v1 --second matrix_gptoss_v1_r2
-.\.venv\Scripts\python.exe -m kerala.bench.trace_html results\runs\matrix_gptoss_v1\pc-gptoss20b\P06\pack
+# 7. Score, analyse and view traces (local only, no model calls); see "Reproduce the results" below
+.\.venv\Scripts\python.exe -m kerala.bench.score --batch matrix_gptoss_v1 --out results\summary\matrix_gptoss_v1
+```
+
+## Final state (2026-11-18)
+
+- **Model:** gpt-oss:20b, the only model that passed the floor check (2/6). See `REPORT.md` §5.
+- **Results:** repeat 1, `matrix_gptoss_v1`. 52/52 runs; **12 correct** (noparam 5/20, inline 1/12, pack 6/20).
+- **Main finding:** tool-protocol confusion. 39 of the 40 incorrect runs contain a tool call the toolkit rejects before any GIS runs. See `REPORT.md` §8.
+- A second repeat was started but stopped at 35/52 runs when access to the GPU machine was lost; it is not used in any result.
+- **Write-up:**
+  - `REPORT.md`;
+  - `INTERVIEW_PREP.md`;
+  - `results/summary/matrix_gptoss_v1/` (`results_tables.md`, `findings_r1.md`, `failure_report.md`, `analysis.md`, `p01_alt_grid.md`, `traces/*.html`);
+  - `results/summary/number_check.md` (the source of every number).
+
+## Reproduce the results (no model calls)
+
+The run folders under `results/runs/` are **git-ignored**. They travel with the project bundle (zip), not with git. The committed summaries in `results/summary/` can be regenerated from them on any machine, including one without a GPU or Ollama:
+
+```powershell
+# Scores, tables, figures for repeat 1 (identical to the committed files)
+.\.venv\Scripts\python.exe -m kerala.bench.score --batch matrix_gptoss_v1 --out results\summary\matrix_gptoss_v1
+# P01 method analysis on repeat 1 only (--second is optional; agreement/kappa only with two repeats)
+.\.venv\Scripts\python.exe -m kerala.bench.analysis --summary results\summary\matrix_gptoss_v1 --first matrix_gptoss_v1
+# P01 under alternative rules, buffers and district filters (independent gold helpers)
+.\.venv\Scripts\python.exe -m kerala.tools.p01_alt_check --out results\summary\matrix_gptoss_v1\p01_alt_grid.md
+# Failure report: per-arm results, tool-protocol errors, domain_param calls, excerpts, run statistics
+.\.venv\Scripts\python.exe -m kerala.tools.failure_report --batch matrix_gptoss_v1 --summary results\summary\matrix_gptoss_v1
+# One trace as HTML
+.\.venv\Scripts\python.exe -m kerala.bench.trace_html results\runs\matrix_gptoss_v1\pc-gptoss20b\P01\pack --out results\summary\matrix_gptoss_v1\traces\P01_pack.html
+```
+
+Run them in this order. `score.py` rewrites `results_tables.md`; `analysis.py` then appends its P01 section. The floor-check and gold tables at the end of `results_tables.md` were appended by hand from `results/summary/**/per_run.csv` and `kerala/bench/gold.json`, so re-append them if you re-score.
+
+The gold and test checks need only the layers in `data/kerala/layers/`:
+
+```powershell
+.\.venv\Scripts\python.exe -m kerala.bench.gold --check
+$t = Get-ChildItem tests -Filter 'test_kerala_*.py' | ForEach-Object FullName; .\.venv\Scripts\python.exe -m pytest -q $t
 ```
 
 ## Setup (Windows laptop)
@@ -64,7 +100,7 @@ The project moved from the GPU PC to a Windows laptop (Intel Core Ultra 5, 16 GB
 - The `.venv` copied from the PC did not work: its `pyvenv.cfg` pointed to the PC user's uv Python (`uv trampoline failed to spawn Python child process`). It was renamed to `.venv_pc_stale/`, which is git-ignored and safe to delete. A fresh venv was built with the commands in step 1 above: `uv venv --python 3.11 .venv`, then the same `uv pip install` line. uv 0.13.8 was already installed (WinGet).
 - Result: CPython 3.11.16, geopandas 1.2.0, rasterio 1.4.4 (GDAL 3.10.3). All geospatial wheels installed directly, so no fallback was needed. PowerShell 5.1 shows uv's normal stderr output as a red `NativeCommandError`; that is harmless.
 - Use **Windows git** (`git` in PowerShell; system `core.autocrlf=true`) for this checkout. The working tree has CRLF line endings, and the frozen hash of `kerala/bench/gold.json` was computed on its CRLF form. A git without autocrlf (for example WSL's) reports about 68 files as modified even though only line endings differ. Do not commit from such a git.
-- Checks on the laptop: Kerala suite `75 passed`, frozen-hash test `1 passed`. Re-scoring `matrix_gptoss_v1` gives the committed summary byte-for-byte (line endings aside).
+- Checks on the laptop: Kerala suite `75 passed` (76 after the single-repeat analysis test was added in Step 2), frozen-hash test `1 passed`, `kerala.bench.gold --check` passed. Re-scoring `matrix_gptoss_v1` gives the committed summary byte-for-byte (line endings aside).
 
 Model settings live in `kerala/models.yaml` (temperature 0, seed 1, 16 rounds, 300 s sandbox limit, 25-minute wall clock). The primary model is `gpt-oss:20b` with `reasoning_effort: low` and `max_tokens: 8192`. `cloud-flashlite` (`gemini-3.5-flash-lite`) is kept only to reproduce its floor-check record; it needs a `GEMINI_API_KEY` in the git-ignored `kerala/.env` and is not used by any default command.
 

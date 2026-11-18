@@ -15,11 +15,33 @@ Session: 2026-11-18, Windows laptop, Claude Code via OpenClaw, following `LAPTOP
   - 39/40 incorrect runs have a tool-protocol error.
   - Pack: 12/12 parameter questions called domain_param; the 8 controls made 0 calls.
   - 5 trace HTML pages are in `traces/`.
-- [ ] Step 3: writing
+- [x] **Step 3: writing.**
+  - `results_tables.md` gained the floor and gold tables.
+  - `REPORT.md` was rewritten in full.
+  - `README_KERALA.md` now has the final state and the reproduce steps.
+  - `INTERVIEW_PREP.md` is finished.
+  - `results/summary/number_check.md` and `kerala/tools/number_check.py` give exit 0.
+  - `kerala.bench.gold --check` passed.
 - [ ] Step 4: GitHub readiness (no push)
 - [ ] Step 5: Morning summary and final commit, then STOP
 
-Next: Step 3. Use Windows git (autocrlf=true) for commits. See README_KERALA "Setup (Windows laptop)".
+Next: Step 4. Use Windows git (autocrlf=true) for commits. See README_KERALA "Setup (Windows laptop)".
+
+### Step 3 record (2026-11-18)
+
+- `results/summary/matrix_gptoss_v1/results_tables.md`: appended "Floor check" (computed from the five floor `per_run.csv` files) and "Gold reference" (from `gold.json` and `rubric.yaml`).
+- `REPORT.md`: the full final report, sections 1–10. It folds in the earlier notes (F6, the model-selection pilots and the 7B floor) in condensed form. The detailed tables of the pilot-era per-run minutes and RAM were dropped, because those numbers are not in any results file. They remain in git history (`d818acd:REPORT.md`) and in this file's Phase 5 sections.
+- `README_KERALA.md`: final state, how to reproduce the results without model calls (the run folders are git-ignored and travel with the bundle), and the one-line repeat 2 note.
+- `INTERVIEW_PREP.md`:
+  - 30-second and 2-minute pitches;
+  - the P01 story, with both the floor and repeat 1 versions;
+  - the floor result and the upstream bugs;
+  - tool-protocol confusion and why there is only one repeat;
+  - 18 Q&As.
+  
+  One correction to the earlier draft: gpt-oss ran on the GPU PC, not "an 8 GB laptop GPU".
+- Gold check: `.\.venv\Scripts\python.exe -m kerala.bench.gold --check` → `Gold check passed: 23 answers, 8 sensitivity groups … Both independent recomputations matched; all sanity statements passed` (log `logs/laptop/gold_check.log`).
+- Number check: `.\.venv\Scripts\python.exe -m kerala.tools.number_check` → REPORT 114/114, README_KERALA 41/41, INTERVIEW_PREP 47/47 listed; exit 0.
 
 ### Step 2 record (2026-11-18)
 
