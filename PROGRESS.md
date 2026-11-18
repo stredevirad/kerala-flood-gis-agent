@@ -9,12 +9,34 @@ Session: 2026-11-18, Windows laptop, Claude Code via OpenClaw, following `LAPTOP
   - meta.json counts: `matrix_gptoss_v1` **52/52**; `matrix_gptoss_v1_r2` **N = 35**.
   - Re-score of r1: identical to the committed summary, 12/52 correct.
   - Log: `logs/laptop/`.
-- [ ] Step 2: analysis (repeat 1 only)
+- [x] **Step 2: analysis (repeat 1 only).**
+  - Main write-up: `results/summary/matrix_gptoss_v1/findings_r1.md`.
+  - P01 shows PARAM_IGNORED/PARAM_CHOICE = 0 in r1. The 96/161 story belongs to the floor-check models.
+  - 39/40 incorrect runs have a tool-protocol error.
+  - Pack: 12/12 parameter questions called domain_param; the 8 controls made 0 calls.
+  - 5 trace HTML pages are in `traces/`.
 - [ ] Step 3: writing
 - [ ] Step 4: GitHub readiness (no push)
 - [ ] Step 5: Morning summary and final commit, then STOP
 
-Next: Step 2. Use Windows git (autocrlf=true) for commits. See README_KERALA "Setup (Windows laptop)".
+Next: Step 3. Use Windows git (autocrlf=true) for commits. See README_KERALA "Setup (Windows laptop)".
+
+### Step 2 record (2026-11-18)
+
+- `kerala/bench/analysis.py`: `--second` is now optional. With `--first` only, it keeps that batch's rows, runs the P01 part, and writes the section `## P01 method analysis (single repeat)`. The agreement/kappa code is unchanged and runs only when `--second` is given. Test: `tests/test_kerala_analysis_single.py`.
+  - Command: `.\.venv\Scripts\python.exe -m kerala.bench.analysis --summary results\summary\matrix_gptoss_v1 --first matrix_gptoss_v1`
+  - Output: failed P01 runs are noparam 82, inline 2, pack 174, with 0 PARAM_IGNORED and 0 PARAM_CHOICE in each arm.
+- New `kerala/tools/p01_alt_check.py` (gold helpers; varies the rule, the buffer and the district filter) → `p01_alt_grid.md`.
+  - 82 = intersects @ 100 m with both districts, i.e. the district filter skipped.
+  - 174 matches no cell.
+- New `kerala/tools/failure_report.py` → `failure_report.md`, `failure_runs.csv`.
+  - 39/40 incorrect runs have a tool-protocol error (36/40 without NameErrors).
+  - 26 incorrect runs wrote no answer.json.
+  - Unknown geoprocess op: 84 events in 28 runs (`load_vector` 39, `list_files` 28).
+- Trace viewers: `.\.venv\Scripts\python.exe -m kerala.bench.trace_html results\runs\matrix_gptoss_v1\pc-gptoss20b\<Q>\<arm> --out results\summary\matrix_gptoss_v1\traces\<Q>_<arm>.html` for P08/pack, P01/pack, P01/noparam, C02/noparam and P06/pack.
+- **Privacy note:** the HTML pages embed tracebacks and meta with the GPU PC's local Windows paths, which include that PC's user name. These are flagged in PUSH_CHECKLIST.md.
+- Raw-reply "13 of 13" is cited as recorded (Session 2 → Repeat 2 below; early r2 runs). It is used as mechanism evidence only, not as a number in any r1 result.
+- Kerala suite after these changes: 76 passed. Frozen test: 1 passed.
 
 ### Step 1 record (2026-11-18)
 

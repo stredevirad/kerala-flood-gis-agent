@@ -6,7 +6,8 @@
     `centroid`)? Matches are labelled PARAM_IGNORED when the rule was given
     (inline/pack) and PARAM_CHOICE when the model chose it (noparam).
 (b) Run-to-run agreement of `correct_final` per cell (repeat 1 vs repeat 2),
-    by arm, with Cohen's kappa.
+    by arm, with Cohen's kappa. Only when `--second` is given: with a single
+    repeat (`--first` alone) part (b) is skipped and only part (a) is written.
 
 Writes `analysis.md`/CSVs into the summary folder and appends the same tables
 to `results_tables.md`, so every reported number is traceable.
@@ -27,6 +28,7 @@ from kerala.config import ROOT
 
 PACK_BUFFER_M = 250.0
 SECTION = "## Analyses across repeats"
+SECTION_SINGLE = "## P01 method analysis (single repeat)"
 
 
 def _bool(value: Any) -> bool:
@@ -143,18 +145,25 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--summary", type=Path, default=ROOT / "results" / "summary")
     parser.add_argument("--first", required=True)
-    parser.add_argument("--second", required=True)
+    parser.add_argument("--second", default=None,
+                        help="second repeat; omit to run only the P01 method analysis on --first")
     args = parser.parse_args(argv)
     summary = args.summary if args.summary.is_absolute() else ROOT / args.summary
     rows = _read_rows(summary)
+    if args.second is None:
+        rows = [r for r in rows if r["batch"] == args.first]
     detail, counts = p01_method(rows)
     reference = counts.pop()["_reference"]
-    cells, agree = agreement(rows, args.first, args.second)
     _write_csv(summary / "p01_method.csv", detail)
-    _write_csv(summary / "agreement_cells.csv", cells)
-    _write_csv(summary / "agreement.csv", agree)
+    if args.second is not None:
+        cells, agree = agreement(rows, args.first, args.second)
+        _write_csv(summary / "agreement_cells.csv", cells)
+        _write_csv(summary / "agreement.csv", agree)
+        header = [SECTION, "", f"Repeats: `{args.first}` (r1) and `{args.second}` (r2).", ""]
+    else:
+        header = [SECTION_SINGLE, "", f"Batch: `{args.first}` only. Run-to-run agreement is not computed (one repeat).", ""]
 
-    lines = [SECTION, "", f"Repeats: `{args.first}` (r1) and `{args.second}` (r2).", "",
+    lines = header + [
              "### P01 gold under alternative facility rules", "", "| Rule | Buffer m | P01 count |", "|---|---:|---:|"]
     lines += [f"| {r['rule']} | {r['buffer_m']:g} | {r['P01']} |" for r in reference]
     lines += ["", "### P01 failed runs matching another facility rule, by arm", "",
@@ -162,6 +171,8 @@ def main(argv: list[str] | None = None) -> int:
     lines += [f"| {c['arm']} | {c['failed_runs']} | {c['PARAM_IGNORED']} | {c['PARAM_CHOICE']} | {c['no_rule_match']} |" for c in counts]
     lines += ["", "### P01 failed runs (detail)", "", "| Repeat | Arm | Value | Matches | Label |", "|---|---|---:|---|---|"]
     lines += [f"| {d['batch']} | {d['arm']} | {d['value']} | {d['matches'] or '—'} | {d['label'] or '—'} |" for d in detail]
+    if args.second is None:
+        return _write_outputs(summary, lines)
     lines += ["", "### Run-to-run agreement of correct_final (r1 vs r2)", "",
               "| Arm | Cells | Agree | Both right | Both wrong | Only r1 right | Only r2 right | Agreement | Cohen's kappa |",
               "|---|---:|---:|---:|---:|---:|---:|---:|---:|"]
@@ -170,12 +181,17 @@ def main(argv: list[str] | None = None) -> int:
     lines += ["", "### Cells whose outcome changed between repeats", "", "| QID | Arm | r1 | r2 |", "|---|---|---|---|"]
     lines += [f"| {c['qid']} | {c['arm']} | {'right' if c['r1_correct'] else 'wrong'} ({c['r1_exit']}) | {'right' if c['r2_correct'] else 'wrong'} ({c['r2_exit']}) |"
               for c in cells if not c["agree"]] or ["| — | — | — | — |"]
+    return _write_outputs(summary, lines)
+
+
+def _write_outputs(summary: Path, lines: list[str]) -> int:
     text = "\n".join(lines) + "\n"
     (summary / "analysis.md").write_text(text, encoding="utf-8")
     tables = summary / "results_tables.md"
     existing = tables.read_text(encoding="utf-8") if tables.is_file() else ""
-    if SECTION in existing:
-        existing = existing[:existing.index(SECTION)].rstrip() + "\n"
+    for section in (SECTION, SECTION_SINGLE):
+        if section in existing:
+            existing = existing[:existing.index(section)].rstrip() + "\n"
     tables.write_text(existing + "\n" + text, encoding="utf-8")
     print(text.encode("ascii", "replace").decode("ascii"))
     return 0

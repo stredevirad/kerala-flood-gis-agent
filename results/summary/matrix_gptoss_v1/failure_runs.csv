@@ -1,0 +1,53 @@
+run_id,qid,arm,correct,exit,taxonomy,answer_written,value,pack_calls,protocol_errors,first_error
+matrix_gptoss_v1/C01/noparam,C01,noparam,True,finished,,True,1417.76,0,0,
+matrix_gptoss_v1/C01/pack,C01,pack,True,finished,,True,1417.76,0,1,unknown_geoprocess_op: load_vector
+matrix_gptoss_v1/C02/noparam,C02,noparam,False,max_rounds,FORMAT,False,,0,5,unknown_geoprocess_op: load_vector
+matrix_gptoss_v1/C02/pack,C02,pack,False,max_rounds,FORMAT,False,,0,3,unknown_geoprocess_op: load_vector
+matrix_gptoss_v1/C03/noparam,C03,noparam,True,finished,,True,Kuttanad,0,4,unexpected_argument: geoprocess(path=)
+matrix_gptoss_v1/C03/pack,C03,pack,True,finished,,True,Kuttanad,0,3,geoprocess_nameerror: flood_extent
+matrix_gptoss_v1/C04/noparam,C04,noparam,False,finished,TOOL_BUG,True,0,0,2,geoprocess_nameerror: hospitals
+matrix_gptoss_v1/C04/pack,C04,pack,True,finished,,True,543,0,1,geoprocess_nameerror: hospitals
+matrix_gptoss_v1/C05/noparam,C05,noparam,False,max_rounds,FORMAT,False,,0,7,geoprocess_nameerror: dem_cop30
+matrix_gptoss_v1/C05/pack,C05,pack,False,finished,FORMAT,False,,0,4,geoprocess_nameerror: dem_cop30
+matrix_gptoss_v1/C06/noparam,C06,noparam,False,max_rounds,FORMAT,False,,0,1,geoprocess_nameerror: flood_clip
+matrix_gptoss_v1/C06/pack,C06,pack,False,finished,LOGIC,True,336.46560204636177,0,1,unknown_geoprocess_op: load_vector
+matrix_gptoss_v1/C07/noparam,C07,noparam,False,finished,FORMAT,False,,0,3,geoprocess_nameerror: hospitals
+matrix_gptoss_v1/C07/pack,C07,pack,False,finished,UNANSWERABLE_ANSWERED,True,5,0,3,geoprocess_nameerror: hospitals
+matrix_gptoss_v1/C08/noparam,C08,noparam,True,finished,,True,,0,0,
+matrix_gptoss_v1/C08/pack,C08,pack,True,finished,,True,,0,0,
+matrix_gptoss_v1/P01/inline,P01,inline,False,finished,TOOL_BUG,True,2,0,3,geoprocess_nameerror: hospitals
+matrix_gptoss_v1/P01/noparam,P01,noparam,False,finished,TOOL_BUG,True,82,0,5,geoprocess_nameerror: hospitals
+matrix_gptoss_v1/P01/pack,P01,pack,False,finished,TOOL_BUG,True,174,2,2,geoprocess_nameerror: hospitals
+matrix_gptoss_v1/P02/inline,P02,inline,False,finished,TOOL_BUG,True,85,0,6,geoprocess_nameerror: schools
+matrix_gptoss_v1/P02/noparam,P02,noparam,False,finished,FORMAT,False,,0,10,geoprocess_nameerror: schools
+matrix_gptoss_v1/P02/pack,P02,pack,False,finished,FORMAT,False,,1,10,geoprocess_nameerror: schools
+matrix_gptoss_v1/P03/inline,P03,inline,False,finished,TOOL_BUG,True,7,0,6,geoprocess_nameerror: hospitals
+matrix_gptoss_v1/P03/noparam,P03,noparam,False,finished,FORMAT,False,,0,0,
+matrix_gptoss_v1/P03/pack,P03,pack,False,max_rounds,FORMAT,False,,1,3,geoprocess_nameerror: districts
+matrix_gptoss_v1/P04/inline,P04,inline,False,finished,TOOL_BUG,True,37,0,1,unexpected_argument: geoprocess(var_name=)
+matrix_gptoss_v1/P04/noparam,P04,noparam,False,finished,TOOL_BUG,True,216,0,2,unknown_geoprocess_op: load_vector
+matrix_gptoss_v1/P04/pack,P04,pack,False,max_rounds,FORMAT,False,,1,6,geoprocess_nameerror: hospitals
+matrix_gptoss_v1/P05/inline,P05,inline,False,max_rounds,FORMAT,False,,0,5,unknown_tool: container
+matrix_gptoss_v1/P05/noparam,P05,noparam,False,finished,TOOL_BUG,True,12.345,0,1,unknown_tool: commentary
+matrix_gptoss_v1/P05/pack,P05,pack,False,finished,FORMAT,False,,2,8,geoprocess_nameerror: districts
+matrix_gptoss_v1/P06/inline,P06,inline,False,max_rounds,FORMAT,False,,0,9,geoprocess_nameerror: districts
+matrix_gptoss_v1/P06/noparam,P06,noparam,False,finished,FORMAT,False,,0,7,geoprocess_nameerror: dem_cop30_meta
+matrix_gptoss_v1/P06/pack,P06,pack,False,max_rounds,FORMAT,False,,4,4,unknown_tool: commentary
+matrix_gptoss_v1/P07/inline,P07,inline,True,finished,,True,56.24,0,5,unknown_geoprocess_op: raster
+matrix_gptoss_v1/P07/noparam,P07,noparam,False,finished,FORMAT,False,,0,1,geoprocess_nameerror: s1_vv_20180821_db
+matrix_gptoss_v1/P07/pack,P07,pack,False,max_rounds,FORMAT,False,,1,5,geoprocess_nameerror: taluks
+matrix_gptoss_v1/P08/inline,P08,inline,False,finished,TOOL_BUG,True,323.643,0,6,geoprocess_nameerror: districts
+matrix_gptoss_v1/P08/noparam,P08,noparam,True,finished,,True,277.488,0,2,geoprocess_nameerror: flood_extent
+matrix_gptoss_v1/P08/pack,P08,pack,True,finished,,True,278.806,1,5,geoprocess_nameerror: flood_extent_20180821
+matrix_gptoss_v1/P09/inline,P09,inline,False,finished,FORMAT,False,,0,3,geoprocess_nameerror: hospitals
+matrix_gptoss_v1/P09/noparam,P09,noparam,False,finished,FORMAT,False,,0,7,geoprocess_nameerror: hospitals
+matrix_gptoss_v1/P09/pack,P09,pack,False,max_rounds,FORMAT,False,,1,1,unknown_geoprocess_op: load_vector
+matrix_gptoss_v1/P10/inline,P10,inline,False,finished,LOGIC,True,Kochi,0,1,unknown_tool: commentary
+matrix_gptoss_v1/P10/noparam,P10,noparam,True,finished,,True,Kuttanad,0,1,geoprocess_nameerror: flood_extent_20180821
+matrix_gptoss_v1/P10/pack,P10,pack,True,finished,,True,Kuttanad,2,3,unknown_tool: commentary
+matrix_gptoss_v1/P11/inline,P11,inline,False,max_rounds,FORMAT,False,,0,5,geoprocess_nameerror: hospitals
+matrix_gptoss_v1/P11/noparam,P11,noparam,False,finished,FORMAT,False,,0,6,geoprocess_nameerror: hospitals
+matrix_gptoss_v1/P11/pack,P11,pack,False,finished,FORMAT,False,,2,8,geoprocess_nameerror: hospitals
+matrix_gptoss_v1/P12/inline,P12,inline,False,finished,TOOL_BUG,True,0,0,8,geoprocess_nameerror: schools
+matrix_gptoss_v1/P12/noparam,P12,noparam,False,finished,FORMAT,False,,0,2,unexpected_argument: geoprocess(path=)
+matrix_gptoss_v1/P12/pack,P12,pack,False,finished,FORMAT,False,,2,7,geoprocess_nameerror: districts
