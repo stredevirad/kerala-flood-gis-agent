@@ -1,4 +1,16 @@
 # PROGRESS
+## Follow-up (2026-11-18): data licences and reference tables
+
+- Added `DATA_LICENSES.md`, linked from `README.md`. It lists every tracked raster, gpkg and geojson with its source and licence:
+  - OSM layers: © OpenStreetMap contributors, ODbL 1.0;
+  - JRC GSW: CC BY 4.0;
+  - Sentinel-1 and DEM GLO-30: Copernicus free and open licence, with attribution;
+  - derived flood layers: Copernicus + CC BY 4.0 terms;
+  - upstream example data: Apache-2.0; Natural Earth: public domain.
+  
+  It states that the AGPL covers the code only.
+- Moved the "Floor check" and "Gold reference" tables out of `results/summary/matrix_gptoss_v1/results_tables.md`, which `score.py` rewrites, into `results/summary/reference_tables.md`. Updated the references in README.md, README_KERALA.md, REPORT.md and INTERVIEW_PREP.md.
+
 ## Final cleanup session (2026-11-18, laptop)
 
 1. **Reproducibility.** Before this session, nothing under `results/runs/` was tracked.

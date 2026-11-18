@@ -2,7 +2,7 @@
 
 Plain-language explanations you should be able to give without notes. Every number here comes from the repo:
 - `results/summary/matrix_gptoss_v1/` (`results_tables.md`, `findings_r1.md`, `failure_report.md`, `p01_alt_grid.md`);
-- `results/summary/floor_diagnostics.md`;
+- `results/summary/floor_diagnostics.md` and `results/summary/reference_tables.md`;
 - the frozen gold files.
 
 `results/summary/number_check.md` lists the source of each number. The main results are from **repeat 1** (`matrix_gptoss_v1`, 52 runs) of gpt-oss:20b.

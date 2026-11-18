@@ -6,7 +6,8 @@ A second repeat was started but stopped at 35/52 runs when access to the GPU mac
 
 Every number below can be traced to a file under `results/` or to a frozen/gold file. The list is in `results/summary/number_check.md`. The main analysis files are:
 - `results/summary/matrix_gptoss_v1/findings_r1.md` (narrative);
-- `failure_report.md`, `results_tables.md`, `p01_alt_grid.md` (same folder).
+- `failure_report.md`, `results_tables.md`, `p01_alt_grid.md` (same folder);
+- `results/summary/reference_tables.md` (floor check and gold reference).
 
 ---
 
@@ -59,7 +60,7 @@ All data is free. Every raster is single-band, 30 m, in **EPSG:32643 (UTM 43N)**
 
 **Gold answers** come from an independent script, `kerala/bench/gold.py`. It uses plain GeoPandas, Shapely, Rasterio and NumPy, never imports the agent, and recomputes everything from the same visible layers.
 - Examples: P01 = 93, P06 = 57.6 km², P07 = 56.236341 %, C01 = 1,417.757234 km².
-- The full table is in `results/summary/matrix_gptoss_v1/results_tables.md` → "Gold reference".
+- The full table is in [`results/summary/reference_tables.md`](results/summary/reference_tables.md) → "Gold reference".
 
 ## 4. Benchmark design
 
@@ -85,7 +86,7 @@ All data is free. Every raster is single-band, 30 m, in **EPSG:32643 (UTM 43N)**
 
 ## 5. Model selection: the floor check
 
-Before any matrix run, a model had to pass a **floor check**: P01 + P06 × 3 arms, with at least **2 of 6** correct (`correct_final` or `correct_given_own_params`). The two questions were fixed in advance and never changed. Source: `results/summary/matrix_gptoss_v1/results_tables.md` → "Floor check".
+Before any matrix run, a model had to pass a **floor check**: P01 + P06 × 3 arms, with at least **2 of 6** correct (`correct_final` or `correct_given_own_params`). The two questions were fixed in advance and never changed. Source: [`results/summary/reference_tables.md`](results/summary/reference_tables.md) → "Floor check".
 
 | Model | correct_final | Verdict |
 |---|---:|---|

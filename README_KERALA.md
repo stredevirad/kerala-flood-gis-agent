@@ -65,7 +65,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File kerala\tools\launch_detached
   - `REPORT.md`;
   - `INTERVIEW_PREP.md`;
   - `results/summary/matrix_gptoss_v1/` (`results_tables.md`, `findings_r1.md`, `failure_report.md`, `analysis.md`, `p01_alt_grid.md`, `traces/*.html`);
-  - `results/summary/number_check.md` (the source of every number).
+  - `results/summary/reference_tables.md` (floor check and gold reference);
+  - `results/summary/number_check.md` (the source of every number);
+  - `DATA_LICENSES.md` (data sources and licences; the AGPL covers code only).
 
 ## Reproduce the results (no model calls)
 
@@ -84,7 +86,7 @@ Repeat 1's run files are committed: `results/runs/matrix_gptoss_v1/**/` holds `m
 .\.venv\Scripts\python.exe -m kerala.bench.trace_html results\runs\matrix_gptoss_v1\pc-gptoss20b\P01\pack --out results\summary\matrix_gptoss_v1\traces\P01_pack.html
 ```
 
-Run them in this order. `score.py` rewrites `results_tables.md`; `analysis.py` then appends its P01 section. The floor-check and gold tables at the end of `results_tables.md` were appended by hand from `results/summary/**/per_run.csv` and `kerala/bench/gold.json`, so re-append them if you re-score.
+Run them in this order. `score.py` rewrites `results_tables.md`; `analysis.py` then appends its P01 section. The floor-check and gold reference tables are kept in `results/summary/reference_tables.md`, which re-scoring does not touch. They were built from `results/summary/**/per_run.csv`, `kerala/bench/gold.json` and `kerala/bench/rubric.yaml`.
 
 The gold and test checks need only the layers in `data/kerala/layers/`:
 

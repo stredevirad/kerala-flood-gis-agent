@@ -24,7 +24,7 @@ Sources: `results/summary/matrix_gptoss_v1/failure_report.md` and `per_run.csv`.
 | qwen3.5:9b | 0/6 |
 | qwen2.5-coder:7b | 0/6 |
 
-Details are in `results/summary/matrix_gptoss_v1/results_tables.md`.
+Details are in [`results/summary/reference_tables.md`](results/summary/reference_tables.md) (floor check and gold reference).
 
 ## Key findings
 
@@ -61,7 +61,7 @@ $t = Get-ChildItem tests -Filter "test_kerala_*.py" | ForEach-Object FullName; .
 .\.venv\Scripts\python.exe -m kerala.bench.score --batch matrix_gptoss_v1 --out results\summary\matrix_gptoss_v1
 ```
 
-Running the agent itself needs Ollama and `gpt-oss:20b`; see [`README_KERALA.md`](README_KERALA.md). Re-scoring rewrites `results_tables.md` without the appended floor and gold sections; restore them with `git checkout -- results/summary/matrix_gptoss_v1/results_tables.md`.
+Running the agent itself needs Ollama and `gpt-oss:20b`; see [`README_KERALA.md`](README_KERALA.md). Re-scoring rewrites `results/summary/matrix_gptoss_v1/results_tables.md`. The floor-check and gold reference tables live separately in `results/summary/reference_tables.md`, so re-scoring cannot overwrite them.
 
 ## Documents
 
@@ -80,10 +80,13 @@ Running the agent itself needs Ollama and `gpt-oss:20b`; see [`README_KERALA.md`
 ## Credits and licence
 
 - Built on [GISclaw](https://github.com/geumjin99/GISclaw), AGPL-3.0-or-later. GISclaw's original README is kept as [`README_GISCLAW.md`](README_GISCLAW.md).
-- This project stays **AGPL-3.0-or-later**; see [`LICENSE`](LICENSE). New source files carry SPDX headers.
+- This project stays **AGPL-3.0-or-later**; see [`LICENSE`](LICENSE). New source files carry SPDX headers. The AGPL covers the code only. The data files keep their own licences; see [`DATA_LICENSES.md`](DATA_LICENSES.md).
 - Implemented with AI coding agents (Codex, Claude Code) under my direction; design decisions, validation and fixes are logged in PROGRESS.md.
 
 ## Data attributions
+
+Full per-file sources and licences are in [`DATA_LICENSES.md`](DATA_LICENSES.md).
+
 
 - Contains modified **Copernicus Sentinel-1** data (2018), accessed via **Microsoft Planetary Computer** (Sentinel-1 RTC).
 - **JRC Global Surface Water** (Pekel et al. 2016, *Nature* 540, 418–422).
