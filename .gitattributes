@@ -1,0 +1,9 @@
+# Frozen benchmark assets (kerala/bench/frozen.json holds their SHA-256 hashes).
+# Store and check out these files byte-for-byte: no line-ending conversion,
+# so a clone on any OS reproduces the hashed bytes (HANDOFF §8).
+kerala/bench/questions.yaml -text
+kerala/bench/rubric.yaml -text
+kerala/bench/gold.json -text
+kerala/bench/frozen.json -text
+kerala/pack/kerala_pack.yaml -text
+data/kerala/layers/* -text
