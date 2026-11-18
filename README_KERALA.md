@@ -69,7 +69,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File kerala\tools\launch_detached
 
 ## Reproduce the results (no model calls)
 
-The run folders under `results/runs/` are **git-ignored**. They travel with the project bundle (zip), not with git. The committed summaries in `results/summary/` can be regenerated from them on any machine, including one without a GPU or Ollama:
+Repeat 1's run files are committed: `results/runs/matrix_gptoss_v1/**/` holds `meta.json`, `answer.json`, `attempts/`, `code.py`, `trace.jsonl`, `checker.jsonl` and `pack_calls.jsonl`, with the PC user name in local paths replaced by `pc-user`. The other batches (floor checks, diagnostics, the stopped repeat 2), `pred_results/`, the `dataset` links and `heartbeat.json` stay git-ignored. The committed summaries in `results/summary/` can be regenerated from a fresh clone on any machine, including one without a GPU or Ollama:
 
 ```powershell
 # Scores, tables, figures for repeat 1 (identical to the committed files)
@@ -97,7 +97,7 @@ $t = Get-ChildItem tests -Filter 'test_kerala_*.py' | ForEach-Object FullName; .
 
 The project moved from the GPU PC to a Windows laptop (Intel Core Ultra 5, 16 GB RAM, no NVIDIA GPU, no Ollama) on 2026-11-18. On the laptop only local scoring, analysis and writing are done. No model is ever called.
 
-- The `.venv` copied from the PC did not work: its `pyvenv.cfg` pointed to the PC user's uv Python (`uv trampoline failed to spawn Python child process`). It was renamed to `.venv_pc_stale/`, which is git-ignored and safe to delete. A fresh venv was built with the commands in step 1 above: `uv venv --python 3.11 .venv`, then the same `uv pip install` line. uv 0.13.8 was already installed (WinGet).
+- The `.venv` copied from the PC did not work: its `pyvenv.cfg` pointed to the PC user's uv Python (`uv trampoline failed to spawn Python child process`). It was renamed to `.venv_pc_stale/` and later deleted; the name is still git-ignored. A fresh venv was built with the commands in step 1 above: `uv venv --python 3.11 .venv`, then the same `uv pip install` line. uv 0.13.8 was already installed (WinGet).
 - Result: CPython 3.11.16, geopandas 1.2.0, rasterio 1.4.4 (GDAL 3.10.3). All geospatial wheels installed directly, so no fallback was needed. PowerShell 5.1 shows uv's normal stderr output as a red `NativeCommandError`; that is harmless.
 - Use **Windows git** (`git` in PowerShell; system `core.autocrlf=true`) for this checkout. The working tree has CRLF line endings, and the frozen hash of `kerala/bench/gold.json` was computed on its CRLF form. A git without autocrlf (for example WSL's) reports about 68 files as modified even though only line endings differ. Do not commit from such a git.
 - Checks on the laptop: Kerala suite `75 passed` (76 after the single-repeat analysis test was added in Step 2), frozen-hash test `1 passed`, `kerala.bench.gold --check` passed. Re-scoring `matrix_gptoss_v1` gives the committed summary byte-for-byte (line endings aside).
@@ -112,7 +112,8 @@ kerala/pack/               domain pack (frozen) and the domain_param tool
 kerala/bench/              questions, rubric, gold (frozen), runner, scorer, analysis, trace viewer
 kerala/tools/              probes, diagnostics, detached launcher
 kerala/upstream/           F1/F2 patches and a ready-to-paste PR body for GISclaw
-results/summary/           scored tables and figures (run folders under results/runs/ are git-ignored)
+results/summary/           scored tables and figures
+results/runs/matrix_gptoss_v1/  repeat 1 run files (other batches are git-ignored)
 ```
 
 ## Attributions

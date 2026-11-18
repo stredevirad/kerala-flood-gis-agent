@@ -18,7 +18,7 @@ import sys
 
 from kerala.config import ROOT
 
-DOCS = ("REPORT.md", "README_KERALA.md", "INTERVIEW_PREP.md")
+DOCS = ("README.md", "REPORT.md", "README_KERALA.md", "INTERVIEW_PREP.md")
 CHECK = ROOT / "results" / "summary" / "number_check.md"
 NUMBER = re.compile(r"(?<![\w/.])[−-]?\d[\d,]*(?:\.\d+)?")
 

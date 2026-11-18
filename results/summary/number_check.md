@@ -115,7 +115,7 @@ None of them is invented.
 | 429 | HTTP status code in F7 | `src/agent/llm_engine.py` (`describe_api_error`) | code |
 | 1 | AnswerChecker: areas below 1 km² flagged as degrees | `kerala/agent.py` (km2 check, `value < 1`) | code |
 | 1252 | Windows code page cp1252 (F3) | code page name | name |
-| 2603.26845 | GISclaw arXiv id | `README.md` (upstream) | external |
+| 2603.26845 | GISclaw arXiv id | `README_GISCLAW.md` (upstream README) | external |
 | 2016, 540, 418, 422 | Pekel et al. citation | literature reference | external |
 | 2010, 2014, 2018 | Copernicus DEM licence years; 2018 floods | data provider attribution; event year | external |
 | 3.11, 3.11.16, 1.2.0, 1.4.4, 3.10.3, 5.1, 0.13.8 | Python / geopandas / rasterio / GDAL / PowerShell / uv versions on the laptop | `logs/laptop/setup_venv.log`; `PROGRESS.md` "Step 1 record" | log |
