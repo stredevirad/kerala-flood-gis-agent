@@ -1,4 +1,12 @@
-# Push checklist (for Kirito; nothing here has been run)
+# Push checklist
+
+**Update 2026-11-18 (publish session).**
+- The PC user name was removed from all history with git-filter-repo, and all commits are authored as `stredevirad <186323128+stredevirad@users.noreply.github.com>`. The decision in §1 is therefore resolved: the trace pages now use repo-relative paths.
+- The push in §4 was run in this session. See PROGRESS.md "Publish session" for the result.
+
+---
+
+*Original checklist (written before the publish session):*
 
 Nothing has been pushed. The repo has **no remote**, and the branch is `master`. Run these yourself, in PowerShell, from `D:\GISclaw_bundle`.
 

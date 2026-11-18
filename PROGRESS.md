@@ -1,4 +1,27 @@
 # PROGRESS
+## Publish session (2026-11-18, laptop): PC user name scrub, history rewrite, push
+
+1. **Backup.** `robocopy D:\GISclaw_bundle D:\GISclaw_backup_prefilter /E /SL /COPY:DAT` copied 44,285 files (2.654 GB). The backup's git works (HEAD `8e56765`, the pre-rewrite history).
+2. **Identity.** `gh auth status` showed github.com logged in as `stredevirad`. `gh api user` returned id `186323128` and an empty name, so NAME = `stredevirad` and EMAIL = `186323128+stredevirad@users.noreply.github.com`.
+3. **PC user name search.** Script `logs/laptop/find_pcuser.sh`, log `find_pcuser.log`. It matches the name case-insensitively with a space, `%20`, `_`, `-`, `.` or nothing between the parts, plus the 8.3 short form.
+   - Tracked files and history: only the 5 `results/summary/matrix_gptoss_v1/traces/*.html` pages, present in 5 commits.
+   - Frozen files and layers: 0, in the tree and in history.
+   - Commit messages and identities: 0.
+   - Git-ignored local files still contain it: `results/runs/**` traces and metas, `logs/machine_setup/*`, `app/server.log`, `__pycache__`. They are never committed and were left unchanged; repeat 2's folder in particular is untouched.
+4. **Trace pages.** `kerala/bench/trace_html.py` now strips machine-specific absolute prefixes. A path inside a GISclaw checkout becomes repo-relative (`src\agent\sandbox.py`, `.venv\Lib\…`), and any other user-profile path becomes `<user-home>\…`. The header shows the run folder relative to the repo. A new test is in `tests/test_kerala_trace_paths.py`. The 5 pages were regenerated with 0 hits. Commit made before the rewrite.
+5. **History rewrite.**
+   - Installed `git-filter-repo` 2.47.0 into `.venv`.
+   - One pass: `--force --replace-text logs\laptop\replacements.txt --name-callback 'return b"stredevirad"' --email-callback 'return b"186323128+stredevirad@users.noreply.github.com"'`. It was run through `logs/laptop/run_filter.py`, because PowerShell 5.1 strips the inner quotes when passing arguments to a native exe. The first attempt failed for that reason, before any ref changed.
+   - Result: 82 commits rewritten; new HEAD `262a69f` for the trace commit.
+   - Set the local git config only: `user.name=stredevirad`, `user.email=186323128+stredevirad@users.noreply.github.com`.
+6. **Cleanup.** `.venv_pc_stale/` deleted. `LAPTOP_TASK.md` left untracked.
+7. **Verification after the rewrite.**
+   - Kerala suite `78 passed` (76 + 2 new path tests). Frozen test `1 passed`. `kerala.bench.gold --check` passed.
+   - The name in any form: 0 in `git log -p --all --text`, 0 in commit messages and identities, 0 in tracked files, 0 in every blob of every commit.
+   - `git log --all --format="%an <%ae> | %cn <%ce>"` gives one distinct line: `stredevirad <186323128+stredevirad@users.noreply.github.com> | stredevirad <186323128+stredevirad@users.noreply.github.com>`.
+   - Secret scan re-run over the tree and all 82 commits (`logs/laptop/secret_scan_postfilter.log`): no real keys. The only hit is still the upstream fake fixture `sk-abcd…` in `tests/test_smoke.py`. No `.env` was ever committed; the only `.env*` files in history are the two blank `.env.example`.
+   - Note: 22 commit messages keep a `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` trailer from the earlier Claude Code sessions. The task asked only for author and committer mapping, so the trailers were not changed.
+
 ## Morning summary (laptop session, 2026-11-18)
 
 **Status:** everything in `LAPTOP_TASK.md` is done, up to its STOP point. There were no model runs of any kind; all work was local scoring, analysis and writing. **Nothing was pushed, and the repo has no remote.** Only repeat 1 is used.
@@ -45,7 +68,7 @@
 3. **`results/_profile/` was not git-ignored**, although older notes said it was. It is now.
 4. **The raw-reply "13 of 13" check** was recorded on early runs of the stopped repeat 2, the only runs with raw logging. It is cited verbatim as mechanism evidence only, and never used as a result number.
 5. **The 5 trace HTML pages** contain the GPU PC's local Windows paths, which include that PC's user name, in 16 places. Decide before pushing; see `PUSH_CHECKLIST.md` §1.
-6. **Commit identity.** This laptop's git config has a placeholder e-mail. Laptop commits were made with the same author as the existing history (`-c user.name/user.email`); the git config itself was not changed.
+6. **Commit identity.** Superseded by the publish session below: every commit is now `stredevirad <186323128+stredevirad@users.noreply.github.com>`, set in the repo's local git config.
 7. P06 passed the floor twice but is 0/3 in r1, another sign of run-to-run variance.
 
 **Repeat 2:** a second repeat was started but stopped at 35/52 runs when access to the GPU machine was lost; it is not used in any result. Its folder `results/runs/matrix_gptoss_v1_r2` was left untouched.
