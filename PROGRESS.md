@@ -1,4 +1,57 @@
 # PROGRESS
+## Morning summary (laptop session, 2026-11-18)
+
+**Status:** everything in `LAPTOP_TASK.md` is done, up to its STOP point. There were no model runs of any kind; all work was local scoring, analysis and writing. **Nothing was pushed, and the repo has no remote.** Only repeat 1 is used.
+
+**What was done:**
+1. **Setup.**
+   - The `.venv` in the zip was the PC's and pointed to the PC user's uv Python, so it could not run. I renamed it to `.venv_pc_stale/` (git-ignored; delete it when you like).
+   - Rebuilt the venv with uv: Python 3.11.16, geopandas 1.2.0, rasterio 1.4.4. No fallbacks were needed.
+   - Health check: r1 has 52/52 `meta.json`. Re-scoring r1 matches the committed summary exactly.
+2. **Analysis (r1 only).**
+   - `kerala.bench.analysis` now runs on one repeat; `--second` is optional, and the kappa code is kept.
+   - New tools: `kerala/tools/p01_alt_check.py` (P01 under other rules, buffers and district filters, using the gold helpers) and `kerala/tools/failure_report.py`.
+   - Write-up: `results/summary/matrix_gptoss_v1/findings_r1.md`, plus 5 trace HTML pages.
+3. **Writing.**
+   - `REPORT.md` (final, 10 sections), `README_KERALA.md` (final state + reproduce steps), `INTERVIEW_PREP.md` (pitches + 18 Q&As).
+   - Floor and gold tables appended to `results_tables.md`.
+   - `results/summary/number_check.md`, with a completeness script (`kerala/tools/number_check.py`, exit 0).
+4. **GitHub readiness.**
+   - `.gitattributes` (`-text` on the frozen files and layers).
+   - Secret scan: clean.
+   - `.gitignore` gaps fixed.
+   - `PUSH_CHECKLIST.md`.
+
+**Tests (final run):**
+- Kerala suite: `76 passed`. That is 75 at the start, plus 1 new test for the single-repeat analysis.
+- Frozen-hash test: `1 passed`.
+- `kerala.bench.gold --check`: passed.
+- `kerala.tools.number_check`: exit 0.
+
+**Repeat 1 headline (gpt-oss:20b, `matrix_gptoss_v1`):**
+- 12/52 correct: noparam 5/20, inline 1/12, pack 6/20. correct_given_own_params is 2/20 (noparam).
+- Pre-registered A2 ≥ A3: not in that direction (A3 better on 2 parameter questions, A2 on 1, p = 1.00). With n = 1 per cell this means nothing.
+- **Main finding: tool-protocol confusion.**
+  - 39/40 incorrect runs contain a call the toolkit rejects. The top offenders are `geoprocess op=load_vector` (39 events) and `op=list_files` (28).
+  - 26 incorrect runs never wrote `answer.json`.
+- All 12 pack parameter questions called `domain_param`. The 8 pack controls made 0 calls; 4 of those 8 were correct.
+
+**Failed or suspicious; please read:**
+1. **The P01 story does not hold for gpt-oss r1.** Its P01 answers are 82, 2 and 174, giving PARAM_IGNORED = PARAM_CHOICE = 0 in every arm.
+   - The clean "96/161 = `intersects`" story belongs to Gemini and Qwen 3.5 in the floor check.
+   - For gpt-oss, the grid shows 82 = `intersects` at 100 m **with the Alappuzha filter skipped**, 174 matches no rule (it retrieved representative_point but joined whole polygons), and 2 was written without computing anything.
+   - REPORT and INTERVIEW_PREP tell it this way.
+2. **Frozen-hash portability bug, fixed without touching content or hashes.** frozen.json's gold.json hash is for its CRLF bytes, but git stored LF, so any non-autocrlf clone would have failed the frozen test. The `-text` attribute plus a renormalize now stores the exact hashed bytes (commit `6bb01a9`), and an autocrlf=false clone check passes. Use **Windows git** on this checkout; WSL git shows 68 phantom line-ending changes.
+3. **`results/_profile/` was not git-ignored**, although older notes said it was. It is now.
+4. **The raw-reply "13 of 13" check** was recorded on early runs of the stopped repeat 2, the only runs with raw logging. It is cited verbatim as mechanism evidence only, and never used as a result number.
+5. **The 5 trace HTML pages** contain the GPU PC's local Windows paths, which include that PC's user name, in 16 places. Decide before pushing; see `PUSH_CHECKLIST.md` §1.
+6. **Commit identity.** This laptop's git config has a placeholder e-mail. Laptop commits were made with the same author as the existing history (`-c user.name/user.email`); the git config itself was not changed.
+7. P06 passed the floor twice but is 0/3 in r1, another sign of run-to-run variance.
+
+**Repeat 2:** a second repeat was started but stopped at 35/52 runs when access to the GPU machine was lost; it is not used in any result. Its folder `results/runs/matrix_gptoss_v1_r2` was left untouched.
+
+**What is left for you:** only the GitHub push. Follow `PUSH_CHECKLIST.md`: decide about the trace pages, then `gh auth login`, then `gh repo create kerala-flood-gis-agent --private --source . --remote origin --push`. `LAPTOP_TASK.md` is untracked; commit it if you want it in the repo.
+
 ## Laptop session checkpoint
 
 Session: 2026-11-18, Windows laptop, Claude Code via OpenClaw, following `LAPTOP_TASK.md`. No model runs. Repeat 1 only.
@@ -27,9 +80,9 @@ Session: 2026-11-18, Windows laptop, Claude Code via OpenClaw, following `LAPTOP
   - Secret scan: clean.
   - `.gitignore` now also covers `results/_profile/` and `**/dataset`.
   - `PUSH_CHECKLIST.md` written. Nothing pushed, no remote.
-- [ ] Step 5: Morning summary and final commit, then STOP
+- [x] **Step 5: Morning summary and final commit.** STOPPED here; no push.
 
-Next: Step 5. Use Windows git (autocrlf=true) for commits. See README_KERALA "Setup (Windows laptop)".
+Next: nothing; the session is complete and STOPPED. Only the GitHub push (by Kirito) remains. Use Windows git (autocrlf=true) for commits. See README_KERALA "Setup (Windows laptop)".
 
 ### Step 4 record (2026-11-18)
 
@@ -137,7 +190,7 @@ No environment fixes were needed.
   - pack 6/20.
 - exit_reason: 40 finished, 12 max_rounds.
 
-## Morning summary (Claude Code, unattended session 2026-11-17)
+## Earlier Morning summary (Claude Code, unattended session 2026-11-17; superseded by the laptop summary above)
 
 **Status:** **gpt-oss:20b passed the Phase 5 floor gate (2/6)** once its integration was fixed. The **local 52-run matrix `matrix_gptoss_v1` is running detached** (launched 06:10 IST). Gemini scored 1/6, so there is no cloud matrix. Phase 6 has not started, and nothing was pushed.
 
