@@ -45,5 +45,10 @@ GISclaw.app/
 build/
 kerala/.env
 results/runs/
+# Rebuildable profile/probe outputs and the `data` link the tests create there
+# (the one tracked example prompt in this folder stays tracked).
+results/_profile/
+# Per-run `dataset` links (also covered by results/runs/ and **/runs/)
+**/dataset
 data/kerala/meta/cache/
 logs/

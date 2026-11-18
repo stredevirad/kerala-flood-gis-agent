@@ -22,10 +22,42 @@ Session: 2026-11-18, Windows laptop, Claude Code via OpenClaw, following `LAPTOP
   - `INTERVIEW_PREP.md` is finished.
   - `results/summary/number_check.md` and `kerala/tools/number_check.py` give exit 0.
   - `kerala.bench.gold --check` passed.
-- [ ] Step 4: GitHub readiness (no push)
+- [x] **Step 4: GitHub readiness (no push).**
+  - `.gitattributes` added; the gold.json blob is stored as its hashed CRLF bytes, and a clone check passed.
+  - Secret scan: clean.
+  - `.gitignore` now also covers `results/_profile/` and `**/dataset`.
+  - `PUSH_CHECKLIST.md` written. Nothing pushed, no remote.
 - [ ] Step 5: Morning summary and final commit, then STOP
 
-Next: Step 4. Use Windows git (autocrlf=true) for commits. See README_KERALA "Setup (Windows laptop)".
+Next: Step 5. Use Windows git (autocrlf=true) for commits. See README_KERALA "Setup (Windows laptop)".
+
+### Step 4 record (2026-11-18)
+
+**`.gitattributes`.** It marks `questions.yaml`, `rubric.yaml`, `gold.json`, `frozen.json`, `kerala_pack.yaml` and `data/kerala/layers/*` as `-text`.
+
+`git ls-files --eol` showed that only `kerala/bench/gold.json` differed between index and working tree (`i/lf w/crlf`), and frozen.json's hash for it (`1037056…`) is that of the CRLF bytes. Before this step, any checkout without autocrlf would have failed the frozen test.
+
+`git add --renormalize` stored the gold.json blob as its exact working-tree CRLF bytes (commit `6bb01a9`). The file on disk and every hash are unchanged.
+
+Checks:
+- `tests/test_kerala_frozen.py` → `1 passed in 0.05s`.
+- `git clone -c core.autocrlf=false . logs\laptop\clone_check` gave SHA-256 values for gold.json, questions.yaml, rubric.yaml and kerala_pack.yaml that equal frozen.json. The clone was then deleted.
+
+**Secret scan.** Script `logs/laptop/secret_scan.sh`, output `logs/laptop/secret_scan.log`. It prints only pattern names, paths and counts, never values.
+- Patterns: Google `AIza…`, OpenAI `sk-…`, Anthropic `sk-ant-…`, GitHub tokens, AWS `AKIA…`, Slack, Hugging Face, private-key blocks, and `*_API_KEY=` assignments with a value of 16 or more characters.
+- Scope: the working tree (including untracked and ignored files, excluding venvs) and all 79 commits.
+- Result: **no real secret.** The only hits are the upstream fake fixture `sk-abcd…` in `tests/test_smoke.py:136` (a settings-masking test, present since the upstream snapshot `f2042be`).
+- No `.env` was ever added (history contains only `.env.example` and `kerala/.env.example`), and `kerala/.env` does not exist.
+- `kerala/.env.example` has `GEMINI_API_KEY=` with a 1-character "value". That character is the CR of its CRLF line ending, so the key is blank.
+
+**`.gitignore`.** It already covered `.venv/`, `kerala/.env`, `results/runs/` (which includes the per-run `dataset` links) and `logs/`.
+- Added: `results/_profile/`, which was **not** ignored before (the old note saying it was git-ignored was wrong) and held untracked `gptoss_raw.json`, `gemini_raw.json`, `data_block.txt` and the `data` link the tests create. The single tracked file `results/_profile/example_prompt_P01_noparam.txt` stays tracked.
+- Also added: `**/dataset` and `.venv_pc_stale/`.
+- Verified with `git check-ignore -v`.
+
+**Large files.** The largest tracked files are `s1_vv_20180821_db.tif` (15,958,113 bytes) and `dem_cop30.tif` (14,610,753 bytes).
+
+**`PUSH_CHECKLIST.md`.** It contains the exact `gh auth login` and `gh repo create kerala-flood-gis-agent --private --source . --remote origin --push` commands, for Kirito to run. They were not run. It also flags the GPU PC's Windows user name embedded in the 5 trace HTML pages.
 
 ### Step 3 record (2026-11-18)
 
