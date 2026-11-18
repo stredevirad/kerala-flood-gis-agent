@@ -1,0 +1,12 @@
+{
+  "question_id": "P01",
+  "status": "ok",
+  "value": 2,
+  "unit": "count",
+  "parameters_used": {
+    "facility_point_rule": "representative_point",
+    "facility_flood_buffer_m": 250
+  },
+  "assumptions": "Hospitals are considered flood‑affected if their point lies within 250 m of the 2018 flood extent and within the Alappuzha district boundary.",
+  "method": "Buffer flood extent by 250 m, intersect with hospital points, intersect with Alappuzha district, and count the matches."
+}

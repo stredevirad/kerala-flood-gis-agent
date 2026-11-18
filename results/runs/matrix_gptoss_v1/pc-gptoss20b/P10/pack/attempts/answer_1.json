@@ -1,0 +1,12 @@
+{
+  "question_id": "P10",
+  "status": "ok",
+  "value": 57.07,
+  "unit": "percent",
+  "parameters_used": {
+    "low_lying_max_elevation_m": 10,
+    "raster_area_rule": "pixel_count * 900 m2, pixel centre inside zone"
+  },
+  "assumptions": "DEM and flood extent share the same CRS and pixel grid.",
+  "method": "Zonal statistics and percentage calculation."
+}

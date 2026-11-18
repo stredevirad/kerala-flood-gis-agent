@@ -1,0 +1,12 @@
+{
+  "question_id": "P01",
+  "status": "ok",
+  "value": 174,
+  "unit": "count",
+  "parameters_used": {
+    "facility_flood_buffer_m": 250,
+    "facility_point_rule": "representative_point"
+  },
+  "assumptions": "All hospitals are represented by point geometries and the 250 m buffer captures flood‑affected facilities.",
+  "method": "Buffer flood extent, clip to Alappuzha, spatial join with hospitals, count points inside."
+}

@@ -1,0 +1,12 @@
+{
+  "question_id": "P04",
+  "status": "ok",
+  "value": 216,
+  "unit": "count",
+  "parameters_used": {
+    "relief_camp_hospital_access_m": 5000,
+    "facility_point_rule": "within"
+  },
+  "assumptions": "Assumed 5 km access distance and within rule.",
+  "method": "Count schools with no hospital within 5 km per taluk."
+}

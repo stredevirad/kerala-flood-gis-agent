@@ -1,0 +1,9 @@
+{
+  "question_id": "C03",
+  "status": "ok",
+  "value": 171.796,
+  "unit": "km2",
+  "parameters_used": {},
+  "assumptions": "All flooded polygons are in the same CRS as taluks, so area is accurate.",
+  "method": "Intersect flood extent with taluks, compute area, aggregate, and select maximum."
+}

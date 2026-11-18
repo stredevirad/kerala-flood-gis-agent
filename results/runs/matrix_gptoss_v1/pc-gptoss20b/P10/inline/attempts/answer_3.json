@@ -1,0 +1,12 @@
+{
+  "question_id": "P10",
+  "status": "ok",
+  "value": "Kochi",
+  "unit": "name",
+  "parameters_used": {
+    "low_lying_max_elevation_m": 10,
+    "raster_area_rule": "pixel_count*900 m2"
+  },
+  "assumptions": "Low‑lying defined as DEM <=10 m; flood extent polygon used as given.",
+  "method": "Rasterized taluks and flood extent, counted low‑lying pixels per taluk, computed share of overlap and selected taluk with highest share."
+}

@@ -1,0 +1,12 @@
+{
+  "question_id": "P08",
+  "status": "ok",
+  "value": 278.806,
+  "unit": "km2",
+  "parameters_used": {
+    "low_lying_max_elevation_m": 10,
+    "raster_area_rule": "30m x 30m"
+  },
+  "assumptions": "DEM elevation threshold of 10 m defines low‑lying land.",
+  "method": "Rasterized flood extent intersected with low‑lying DEM pixels; pixel area 900 m²."
+}

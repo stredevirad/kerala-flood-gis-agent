@@ -1,0 +1,9 @@
+{
+  "question_id": "C01",
+  "status": "ok",
+  "value": 1417.76,
+  "unit": "km2",
+  "parameters_used": {},
+  "assumptions": "Area computed from the district polygon in EPSG:32643.",
+  "method": "Polygon area via GeoPandas geometry.area in projected CRS."
+}

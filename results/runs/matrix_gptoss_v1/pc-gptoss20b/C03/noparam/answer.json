@@ -1,0 +1,9 @@
+{
+  "question_id": "C03",
+  "status": "ok",
+  "value": "Kuttanad",
+  "unit": "name",
+  "parameters_used": {},
+  "assumptions": "All flood polygons are in the same CRS as taluk polygons, so area calculations are accurate.",
+  "method": "Intersected flood extent with taluk polygons, summed area per taluk, and selected the maximum."
+}

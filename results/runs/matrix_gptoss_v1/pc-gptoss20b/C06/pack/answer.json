@@ -1,0 +1,9 @@
+{
+  "question_id": "C06",
+  "status": "ok",
+  "value": 336.46560204636177,
+  "unit": "km2",
+  "parameters_used": {},
+  "assumptions": "Flood extent polygon is already in the district CRS and represents flooded area accurately.",
+  "method": "Clip flood extent to Ernakulam district and sum area of resulting geometry."
+}

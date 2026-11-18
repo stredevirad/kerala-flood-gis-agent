@@ -1,0 +1,12 @@
+{
+  "question_id": "P03",
+  "status": "ok",
+  "value": 7,
+  "unit": "count",
+  "parameters_used": {
+    "relief_camp_hospital_access_m": 3000,
+    "facility_point_rule": "representative_point"
+  },
+  "assumptions": "Alappuzha district name matches exactly in the districts layer.",
+  "method": "Count schools in Alappuzha that are not within 3 km of any hospital."
+}

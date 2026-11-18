@@ -1,0 +1,12 @@
+{
+  "question_id": "P08",
+  "status": "ok",
+  "value": 277.488,
+  "unit": "km2",
+  "parameters_used": {
+    "low_lying_max_elevation_m": 5,
+    "raster_area_rule": "pixel_area"
+  },
+  "assumptions": "Assumed low‑lying as elevation <5 m and used 30 m pixel size.",
+  "method": "Count DEM cells <5 m within Alappuzha flood extent and convert to km²."
+}

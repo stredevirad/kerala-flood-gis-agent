@@ -1,0 +1,12 @@
+{
+  "question_id": "P02",
+  "status": "ok",
+  "value": 85,
+  "unit": "count",
+  "parameters_used": {
+    "facility_point_rule": "representative_point",
+    "facility_flood_buffer_m": 250
+  },
+  "assumptions": "Schools are represented by their point geometry and flood impact is defined by a 250 m buffer around the 21 Aug 2018 flood extent.",
+  "method": "Count of schools within 250 m of the 21 Aug 2018 flood extent, restricted to Ernakulam district."
+}

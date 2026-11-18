@@ -1,0 +1,12 @@
+{
+  "question_id": "P10",
+  "status": "ok",
+  "value": 64.69,
+  "unit": "percent",
+  "parameters_used": {
+    "low_lying_max_elevation_m": 5.0,
+    "raster_area_rule": 10.0
+  },
+  "assumptions": "Low‑lying defined as elevation ≤ 5.0 m and only taluks with ≥10.0 km² of such land considered.",
+  "method": "Rasterized taluk and flood layers, computed low‑lying area and overlap, then selected taluk with highest percentage overlap."
+}

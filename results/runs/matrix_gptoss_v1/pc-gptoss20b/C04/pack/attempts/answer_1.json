@@ -1,0 +1,9 @@
+{
+  "question_id": "C04",
+  "status": "ok",
+  "value": 543,
+  "unit": "count",
+  "parameters_used": {},
+  "assumptions": "Assumes district name field is 'name' and hospitals are points.",
+  "method": "Spatial join of hospitals to districts and count where district name is Ernakulam."
+}

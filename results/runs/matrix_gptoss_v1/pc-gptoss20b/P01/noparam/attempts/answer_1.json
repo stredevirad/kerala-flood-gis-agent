@@ -1,0 +1,12 @@
+{
+  "question_id": "P01",
+  "status": "ok",
+  "value": 82,
+  "unit": "count",
+  "parameters_used": {
+    "facility_point_rule": "buffer",
+    "facility_flood_buffer_m": 100
+  },
+  "assumptions": "A 100 m buffer around each hospital point was used to represent the facility flood buffer.",
+  "method": "Buffer hospitals by 100 m, intersect with flood extent, then intersect with Alappuzha district and count unique hospitals."
+}

@@ -1,0 +1,12 @@
+{
+  "question_id": "P04",
+  "status": "ok",
+  "value": 37,
+  "unit": "count",
+  "parameters_used": {
+    "relief_camp_hospital_access_m": 3000,
+    "facility_point_rule": "representative_point geometry rule"
+  },
+  "assumptions": "All schools and hospitals are projected to EPSG:32643 and buffers are Euclidean 3000 m.",
+  "method": "Buffer hospitals, select schools outside buffers, spatially join to taluks, count per taluk, take maximum."
+}

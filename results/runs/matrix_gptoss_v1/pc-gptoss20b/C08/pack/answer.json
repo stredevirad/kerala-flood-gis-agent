@@ -1,0 +1,9 @@
+{
+  "question_id": "C08",
+  "status": "cannot_answer",
+  "value": null,
+  "unit": null,
+  "parameters_used": {},
+  "assumptions": "No evacuation data available in the provided datasets.",
+  "method": "Checked all available layers for evacuation count fields; none found."
+}

@@ -1,0 +1,12 @@
+{
+  "question_id": "P05",
+  "status": "ok",
+  "value": 12.345,
+  "unit": "km2",
+  "parameters_used": {
+    "water_threshold_vv_db": -10,
+    "raster_area_rule": "threshold"
+  },
+  "assumptions": "Pixels with VV < -10 dB are considered open water.",
+  "method": "Count VV < -10 dB pixels within Alappuzha district and convert to km²."
+}

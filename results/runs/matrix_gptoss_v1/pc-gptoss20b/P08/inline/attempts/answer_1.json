@@ -1,0 +1,12 @@
+{
+  "question_id": "P08",
+  "status": "ok",
+  "value": 323.643,
+  "unit": "km2",
+  "parameters_used": {
+    "low_lying_max_elevation_m": 10,
+    "raster_area_rule": "pixel_count*900 m2"
+  },
+  "assumptions": "Assumed flood extent polygon fully covers low‑lying DEM pixels; pixel centre rule applied.",
+  "method": "Count DEM pixels <10 m within flood extent and multiply by 900 m²."
+}

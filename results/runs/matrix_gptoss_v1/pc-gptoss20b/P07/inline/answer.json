@@ -1,0 +1,14 @@
+{
+  "question_id": "P07",
+  "status": "ok",
+  "value": 56.24,
+  "unit": "percent",
+  "parameters_used": {
+    "water_threshold_vv_db": -14.0,
+    "permanent_water_rule": "jrc_seasonality >= 10",
+    "max_flood_slope_deg": 5,
+    "raster_area_rule": "pixel_count * 900 m2"
+  },
+  "assumptions": "All rasters are aligned and use the same CRS; pixel centre rule applies.",
+  "method": "Raster clipping, masking, and pixel counting to compute flooded area percentage."
+}

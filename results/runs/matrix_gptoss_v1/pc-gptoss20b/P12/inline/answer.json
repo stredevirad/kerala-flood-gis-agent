@@ -1,0 +1,13 @@
+{
+  "question_id": "P12",
+  "status": "ok",
+  "value": 0,
+  "unit": "count",
+  "parameters_used": {
+    "relief_camp_hospital_access_m": 3000,
+    "facility_point_rule": "representative_point geometry rule",
+    "facility_flood_buffer_m": 250
+  },
+  "assumptions": "All layers are in EPSG:32643 and Euclidean distances are used.",
+  "method": "Buffer flood extent and hospitals, intersect with schools in Ernakulam, count the result."
+}

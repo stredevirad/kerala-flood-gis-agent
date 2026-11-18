@@ -1,0 +1,9 @@
+{
+  "question_id": "C08",
+  "status": "cannot_answer",
+  "value": null,
+  "unit": null,
+  "parameters_used": {},
+  "assumptions": "No dataset provides evacuation counts for Ernakulam district.",
+  "method": "Checked all available layers; none contain evacuation data."
+}
